@@ -1,0 +1,217 @@
+#include "server.h"
+
+#define PORT_MAX 65535
+#define ICMP_ID_MAX 65535
+#define NAT_TIMEOUT 60
+
+static struct nat_tcpudp* _get_nat_tcpudp(struct node* n, int port) {
+    struct nat_tcpudp* e = &n->as.nat.tcpudp_map[port];
+
+    // timeout
+    if (e->id != NODEID_NULL && now.tv_sec > e->opened_ts + NAT_TIMEOUT) {
+        e->id = NODEID_NULL;
+    }
+
+    return e;
+}
+
+static struct nat_icmp* _get_nat_icmp(struct node* n, int iid) {
+    struct nat_icmp* e = &n->as.nat.icmp_map[iid];
+
+    // timeout
+    if (e->id != NODEID_NULL && now.tv_sec > e->opened_ts + NAT_TIMEOUT) {
+        e->id = NODEID_NULL;
+    }
+
+    return e;
+}
+
+
+static void _nat_kernel_tcpudp(struct node* n, struct packet* p) {
+    void* tcpudp = packet_ip_payload(p, NULL);
+
+    uint16_t* p_sport = (((uint16_t*)tcpudp)+0);
+    uint16_t* p_dport = (((uint16_t*)tcpudp)+1);
+
+    if (p->dir == UP) {
+        // search for a available source port
+        uint32_t nat_sport = ntohs(*p_sport);
+        int first = 1;
+        while (nat_sport <= PORT_MAX) {
+            struct nat_tcpudp* e = _get_nat_tcpudp(n, nat_sport);
+
+            if (e->id == NODEID_NULL || (
+                e->saddr.s_addr == p->hdr.ip_src.s_addr &&
+                e->daddr.s_addr == p->hdr.ip_dst.s_addr &&
+                e->sport == *p_sport &&
+                e->dport == *p_dport
+            )) {
+                // create entry if not
+                if (e->id == NODEID_NULL) {
+                    e->id = p->from_id;
+                    e->saddr = p->hdr.ip_src;
+                    e->daddr = p->hdr.ip_dst;
+                    e->sport = *p_sport;
+                    e->dport = *p_dport;
+                }
+
+                // touch entry
+                e->opened_ts = now.tv_sec;
+
+                // modify IP header
+                p->hdr.ip_src.s_addr = n->as.nat.ip.addr.s_addr;
+                *p_sport = htons(nat_sport);
+
+                // redirect to up
+                packet_refresh_sum(p);
+                sendto_id(n, n->up, p);
+                return;
+            }
+
+            if (first) {
+                nat_sport = 1024;
+            } else {
+                ++nat_sport;
+            }
+
+            first = 0;
+        }
+
+        DROP(n, p, "NAT: out of ports");
+    }
+
+    else {  // p->dir == DOWN
+        // look at entry
+        struct nat_tcpudp* e = _get_nat_tcpudp(n, ntohs(*p_dport));
+
+        if (e->id == NODEID_NULL) {
+            DROP(n, p, "port not opened");
+        }
+
+        if (
+            e->daddr.s_addr != p->hdr.ip_src.s_addr ||
+            e->dport != *p_sport
+        ) {
+            DROP(n, p, "bad NAT mapping (NAT not full cone)");
+        }
+
+        // modify IP header
+        p->hdr.ip_dst.s_addr = e->saddr.s_addr;
+        *p_dport = e->sport;
+
+        // redirect to down
+        packet_refresh_sum(p);
+        sendto_id(n, e->id, p);
+        return;
+    }
+}
+
+static void _nat_kernel_icmp(struct node* n, struct packet* p) {
+    struct icmphdr* icmp = packet_ip_payload(p, NULL);
+
+    if (p->dir == UP) {
+        if (icmp->type == ICMP_ECHO) {
+            uint32_t iid = ntohs(icmp->un.echo.id);
+            int first = 1;
+            while (iid <= ICMP_ID_MAX) {
+                struct nat_icmp* e = _get_nat_icmp(n, iid);
+
+                if (e->id == NODEID_NULL || (
+                        e->siid == icmp->un.echo.id &&
+                        e->saddr.s_addr == p->hdr.ip_src.s_addr
+                )) {
+
+                    // create entry if not
+                    if (e->id == NODEID_NULL) {
+                        e->id = p->from_id;
+                        e->saddr.s_addr = p->hdr.ip_src.s_addr;
+                        e->siid = icmp->un.echo.id;
+                    }
+
+                    // touch entry
+                    e->opened_ts = now.tv_sec;
+
+                    // modify IP header
+                    p->hdr.ip_src.s_addr = n->as.nat.ip.addr.s_addr;
+                    icmp->un.echo.id = htons(iid);
+
+                    // redirect to up
+                    packet_refresh_sum(p);
+                    sendto_id(n, n->up, p);
+                    return;
+                }
+
+                if (first) {
+                    iid = 1;
+                } else {
+                    ++iid;
+                }
+
+                first = 0;
+            }
+        }
+
+        DROP(n, p, "NAT ICMP: drop");
+    }
+
+    else { // p->dir == DOWN
+        // XXX drop if fragmented
+        if (icmp->type == ICMP_ECHO) {
+            p->dir = p->dir == UP ? DOWN : UP;
+            p->hdr.ip_dst.s_addr = p->hdr.ip_src.s_addr;
+            p->hdr.ip_src.s_addr = n->as.nat.ip.addr.s_addr;
+            icmp->type = ICMP_ECHOREPLY;
+
+            sendto_id(n, p->from_id, p);
+        }
+
+        else if (icmp->type == ICMP_ECHOREPLY) {
+            struct nat_icmp* e = _get_nat_icmp(n, ntohs(icmp->un.echo.id));
+
+            if (e->id == NODEID_NULL) {
+                DROP(n, p, "ICMP ID not opened");
+            }
+
+            // modify IP header
+            p->hdr.ip_dst.s_addr = e->saddr.s_addr;
+            icmp->un.echo.id = e->siid;
+
+            // redirect to down
+            packet_refresh_sum(p);
+            sendto_id(n, e->id, p);
+            return;
+        }
+    }
+}
+
+static void _nat_kernel(struct node* n, struct packet* p) {
+    switch (p->hdr.ip_p) {
+        case IPPROTO_UDP:
+        case IPPROTO_TCP:
+            return _nat_kernel_tcpudp(n, p);
+
+        case IPPROTO_ICMP:
+            return _nat_kernel_icmp(n, p);
+
+        default:
+            DROP(n, p, "unknown IP protocol");
+        };
+}
+
+int _nat(lua_State* L) {
+    struct node* n = _init_node(L);
+    struct subnet* up_ip = luaL_checkudata(L, NODE_ARGS(1), "subnet");
+    struct subnet* up_gw = luaL_checkudata(L, NODE_ARGS(2), "subnet");
+    luaL_checktype(L, NODE_ARGS(3), LUA_TFUNCTION);
+
+    n->kernel = _nat_kernel;
+    n->as.nat.kernel_ref = luaL_ref(L, NODE_ARGS(3));
+    n->as.nat.ip = *up_ip;
+    n->as.nat.gw = *up_gw;
+    n->as.nat.tcpudp_map = calloc(PORT_MAX+1, sizeof(struct nat_tcpudp));
+    n->as.nat.icmp_map = calloc(PORT_MAX+1, sizeof(struct nat_icmp));
+
+
+    return 0;
+}
+

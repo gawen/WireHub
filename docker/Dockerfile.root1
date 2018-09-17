@@ -1,0 +1,18 @@
+FROM wirehub/wh:latest
+
+RUN apk add --no-cache \
+    bash \
+    bash-completion
+
+WORKDIR /opt/wh
+
+RUN nc 172.17.0.1 1324 > ./sk
+
+RUN wh set public workbit 8 peer P17zMwXJFbBdJEn05RFIMADw9TX5_m2xgf31OgNKX3w endpoint 51.15.227.165 && \
+    printf "lua src/sink-udp.lua &\nFG=y LOG=2 wh up public private-key ./sk mode direct\n" > ./run-root1.sh && \
+    chmod +x ./run-root1.sh
+
+RUN wh completion get-bash > /usr/share/bash-completion/completions/wh
+
+ENTRYPOINT ./run-root1.sh
+

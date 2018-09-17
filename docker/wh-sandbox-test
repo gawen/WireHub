@@ -1,0 +1,53 @@
+#!/usr/bin/env lua
+
+if io.open("tests/keys/config") == nil then
+    print("You first need to generate test keys.")
+    print("To do so, run on your host machine ...")
+    print("")
+    print("  ./tests/generate-keys.sh")
+    print("")
+    print("... and retry")
+
+    return
+end
+
+if arg[1] == nil then
+    print(string.format("usage: %s <test peer ID>", arg[0]))
+
+    return
+end
+
+local id = tonumber(arg[1])
+assert(id)
+
+function execf(...)
+    local cmd = string.format(...)
+    print("\x1b[1;30m$ " .. cmd .. "\x1b[0m")
+    return os.execute(cmd)
+end
+
+execf("rm -f /tmp/log")
+execf("ip link del wg")
+execf("make")
+
+print(string.rep('-', 80))
+
+execf("wh clearconf test")
+execf("cp tests/keys/config /etc/wirehub/test")
+
+local mode = arg[2] or 'unknown'
+
+skpath = string.format('tests/keys/%d.sk', id)
+
+--execf('cat %s | wg pubkey > k', skpath)
+
+print("")
+execf("ip link add dev wg type wireguard")
+execf("wg set wg private-key %s listen-port 0", skpath)
+execf("ip link set wg up")
+
+if os.getenv("VALGRIND") then
+    execf("WH_LOGPATH=/tmp/log valgrind /usr/local/bin/lua src/tools/cli.lua up test interface wg mode %s", mode)
+else
+    execf("WH_LOGPATH=/tmp/log wh up test interface wg mode %s", mode)
+end

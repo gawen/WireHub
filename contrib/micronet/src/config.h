@@ -1,0 +1,11 @@
+#ifndef MICRONET_CONFIG_H
+#define MICRONET_CONFIG_H
+
+#define DEFAULT_SERVER_PORT 4321
+
+#define UNET_DEFAULT_MTU    1500
+#define UNET_ENV_MTU        "UNET_MTU"
+
+
+#endif  // MICRONET_CONFIG_H
+
