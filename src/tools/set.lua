@@ -29,7 +29,7 @@ if not name then
 end
 
 local function tohost(n)
-    local m = string.match(n, '([%a%d%.%-]+)')
+    local m = string.match(n, '([%a%d%.%-%_]+)')
     if m ~= n then
         n = nil
     end
