@@ -294,6 +294,9 @@ PING 10.0.42.2 (10.0.42.2): 56 data bytes
 
 ### Future
 
+- **GNU Name Service Switch plug-in** to allow name resolution of WireHub peers
+  by common Linux programs (see `wh resolve`).
+
 - **Zero-configuration networking** with IPv6 [ORCHID][orchid] addresses: every
   peer has an allocated IP address (see `wh orchid`);
 
