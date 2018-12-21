@@ -315,6 +315,9 @@ node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV
 
 ## Current limitations
 
+- **Automatic testing**: a lot of work needs to be done to make real automatic
+  testing possible with WireHub. Current efforts are on [`micronet`][micronet].
+
 - **Untrusted cryptography**: even if WireHub basics cryptographic routines are
   based on the trusted [Libsodium][libsodium], the WireHub cryptographic
   architecture has not been audited yet. If you're interested to contribute on
@@ -345,6 +348,7 @@ node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV
 [libpcap]: https://www.tcpdump.org/
 [libsodium]: https://download.libsodium.org/doc/
 [lua]: https://www.lua.org/
+[micronet]: https://github.com/Gawen/WireHub/tree/master/contrib/micronet
 [netcat]: https://en.wikipedia.org/wiki/Netcat
 [orchid]: https://datatracker.ietf.org/doc/rfc4843/
 [pow]: https://en.wikipedia.org/wiki/Proof-of-work_system
