@@ -266,6 +266,37 @@ PING 10.0.42.2 (10.0.42.2): 56 data bytes
 ...
 ```
 
+### Zero Netcat
+
+[![demo](https://asciinema.org/a/217931.svg)](https://asciinema.org/a/217931?autoplay=1)
+
+Zero Netcat, or `0nc`, is a modified version of [Netcat][netcat] which runs over
+WireHub. It has the nice property to be secure, peer-to-peer and agnostic of the
+network topology.
+
+On one node, run the WireHub sandbox.
+
+```
+$ docker run -it --cap-add NET_ADMIN wirehub/sandbox /bin/bash
+```
+
+Run `0nc`.
+
+```
+node_a # 0nc.lua
+znc invitation: ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV2b5lN7j3eLILjplBffvjdcw
+```
+
+Copy the znc invitation. Run another WireHub sandbox, call `0nc` with the
+invitation as argument.
+
+```
+node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV2b5lN7j3eLILjplBffvjdcw
+```
+
+`STDIN` of `node_a` is now pipe-d into `STDOUT` of `node_b`, and vice-versa.
+
+
 ## Dependencies
 
 - [Libpcap][libpcap]
@@ -310,6 +341,7 @@ PING 10.0.42.2 (10.0.42.2): 56 data bytes
 [libpcap]: https://www.tcpdump.org/
 [libsodium]: https://download.libsodium.org/doc/
 [lua]: https://www.lua.org/
+[netcat]: https://en.wikipedia.org/wiki/Netcat
 [orchid]: https://datatracker.ietf.org/doc/rfc4843/
 [pow]: https://en.wikipedia.org/wiki/Proof-of-work_system
 [sandbox-docker]: https://hub.docker.com/r/wirehub/sandbox/
