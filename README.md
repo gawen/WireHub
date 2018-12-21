@@ -42,23 +42,27 @@ testing only.
 - Linux or Docker
 - WireGuard
 
-## Quickstart with Docker
+## Getting started
 
-You can test WireHub with Docker with the image [`wirehub/wh`][wh-docker].
-There's a playground container [`wirehub/sandbox`][sandbox-docker] which is
-handier to use (auto-completion enabled, debug tooling, live troubleshooting
-ready, ...).
+### Start a public peer
 
-To build the Docker images manually,
+Clone the current repository.
 
 ```
-$ git clone https://github.com/Gawen/WireHub
+$ git clone --recursive https://github.com/Gawen/WireHub
 $ cd WireHub
-$ git submodule update --init
-$ make docker-sandbox
 ```
 
-Start a sandbox,
+Build the Docker images [`wirehub/wh`][wh-docker] and [`wirehub/sandbox`][sandbox-docker].
+ The former is a minimalist Docker image with WireHub. The latter is handier to
+ use (auto-completion enabled, debug tooling installed, testing scripts present,
+ ...).
+
+```
+$ make docker docker-sandbox
+```
+
+Start a WireHub's sandbox,
 
 ```
 $ docker run -it --cap-add NET_ADMIN wirehub/sandbox /bin/bash
@@ -67,7 +71,7 @@ $ docker run -it --cap-add NET_ADMIN wirehub/sandbox /bin/bash
 Make sure WireHub is installed.
 
 ```
-$ wh help
+# wh help
 Usage: wh <cmd> [<args>]
 
 [...]
@@ -76,14 +80,8 @@ Usage: wh <cmd> [<args>]
 Set up the minimal configuration for the `public` network.
 
 ```
-$ curl https://raw.githubusercontent.com/Gawen/WireHub/master/config/public | wh setconf public -
-```
-
-An example configuration for the network `public` looks like this:
-
-```
-# Example configuration for WireHub public network
-
+# curl https://raw.githubusercontent.com/Gawen/WireHub/master/config/public | wh setconf public -
+# wh showconf public
 [Network]
 Name = public
 Namespace = public
@@ -95,25 +93,26 @@ Bootstrap = yes
 PublicKey = P17zMwXJFbBdJEn05RFIMADw9TX5_m2xgf31OgNKX3w
 Endpoint = 51.15.227.165:62096
 ```
-
 Starts a peer for network `public`.
 
 ```
-$ wh up public
+# wh up public
 ```
 
 You can make sure WireHub is running.
 
 ```
-$ wh
+# wh
 interface gOVQwCSUxK, network public, node <>
   public key: gOVQwCSUxKUhUrkUSF0aDvssDfWVrrnm47ZMp5GJtDg
 ```
 
-Here to see all peers.
+No peers are displayed, as no trusted peers were set up.
+
+Here to see all peers (non-trusted included).
 
 ```
-$ wh show gOVQwCSUxK all
+# wh show gOVQwCSUxK all
 interface gOVQwCSUxK, network public, node <>
   public key: gOVQwCSUxKUhUrkUSF0aDvssDfWVrrnm47ZMp5GJtDg
 
@@ -127,6 +126,153 @@ interface gOVQwCSUxK, network public, node <>
   ◒  PgjYqFfsyS: 1.2.3.4:39582 (bucket:1)
   ●  P17zMwXJFb: 51.15.227.165:62096 (bucket:1)
   [...]
+```
+
+Advise: use auto-completion to avoid writing wirehub interface, peer's keys or
+other arguments. For example, one could write:
+
+```
+# wh sh<TAB>
+  wh show <TAB>
+  wh show gOVQwCSUxK a<TAB>
+  wh show gOVQwCSUxK all
+```
+
+We now have a WireHub peer, but without any trusted peers. No WireGuard tunnel
+was instantiated yet. Your node is part of the public Kademilia DHT, and will
+contribute to peer decentralized discovery and traffic relaying.
+
+You may stop the WireHub peer as so:
+
+```
+# wh down gOVQwCSUxK
+```
+
+### Create a simple private network
+
+Let's create a private network called `tutorial`, with two peers: `node_a` and
+`node_b`.
+
+Start a sandbox on `node_a` and `node_b`. Run on both nodes:
+
+```
+$ docker run -it --cap-add NET_ADMIN wirehub/sandbox /bin/bash
+```
+
+First, make sure [WireGuard][wireguard] is installed.
+
+```
+$ wh check-wg
+OK! WireGuard is installed.
+```
+
+Peers of the private network `tutorial` will bootstrap through the `public`
+network. To do so, copy the network `public` in the network `tutorial`. Run on
+both nodes:
+
+```
+# wh showconf public | wh setconf tutorial -
+```
+
+Set the private network IP subnetwork to `10.0.42.0/24` (for example). Run on
+both nodes:
+
+```
+# wh set tutorial subnet 10.0.42.0/24
+```
+
+Generate private and public keys.
+
+```
+node_a # wh genkey tutorial | tee node_a.sk | wh pubkey | tee node_a.k
+tWTOaY8X5XXtC4VzN0EEr_H3dTG0Hos5hCJ7mqxk_Fw
+...
+node_b # wh genkey tutorial | tee node_b.sk | wh pubkey | tee node_b.k
+y95rAwKFm9UZkx629NxOH9XEBG7Y1KQfrG7oxRmykTY
+```
+
+Set up the private `tutorial` with the trusted peers `node_a` and `node_b`:
+`node_a` will have private IP address `10.0.42.1` and `node_b` `10.0.42.2`. Run
+on both nodes:
+
+```
+# wh set tutorial ip 10.0.42.1 name node_a peer zW-1lBeQ7IkT6NW6hL_NsV4eOPOwJi_rt1vO-omOEmQ
+# wh set tutorial ip 10.0.42.2 name node_b peer g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
+```
+
+You can check the current configuration of network `tutorial`:
+
+```
+# wh showconf tutorial
+[Network]
+Name = tutorial
+Namespace = public
+Workbits = 8
+SubNetwork = 10.0.42.0/24
+
+[Peer]
+# Trust = no
+Bootstrap = yes
+PublicKey = P17zMwXJFbBdJEn05RFIMADw9TX5_m2xgf31OgNKX3w
+Endpoint = 51.15.227.165:62096
+
+[Peer]
+Trust = yes
+Name = node_a
+IP = 10.0.42.1
+PublicKey = zW-1lBeQ7IkT6NW6hL_NsV4eOPOwJi_rt1vO-omOEmQ
+
+[Peer]
+Trust = yes
+Name = node_b
+IP = 10.0.42.2
+PublicKey = g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
+```
+
+Create a WireGuard tunnel for the network `tutorial`:
+
+```
+node_a # ip link add dev wg-tutorial type wireguard
+node_a # wg set wg-tutorial private-key ./node_a.sk listen-port 0
+node_a # ip link set wg-tutorial up
+...
+node_b # ip link add dev wg-tutorial type wireguard
+node_b # wg set wg-tutorial private-key ./node_b.sk listen-port 0
+node_b # ip link set wg-tutorial up
+```
+
+Start the private network. Run on both nodes:
+
+```
+# wh up tutorial interface wg-tutorial
+```
+
+You can check the status of the VPN:
+
+```
+node_a # wh
+interface wg-tutorial, network tutorial, node node_a <NAT>
+  public key: zW-1lBeQ7IkT6NW6hL_NsV4eOPOwJi_rt1vO-omOEmQ
+
+  peers
+     node_b
+...
+node_b # wh
+interface wg-tutorial, network tutorial, node node_b <NAT>
+  public key: g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
+
+  peers
+     node_a
+```
+
+Now ping `node_b` from `node_a`:
+
+```
+peer_a # ping 10.0.42.2
+PING 10.0.42.2 (10.0.42.2): 56 data bytes
+64 bytes from 10.0.42.2: seq=0 ttl=64 time=106.801 ms
+64 bytes from 10.0.42.2: seq=1 ttl=64 time=49.778 ms
+...
 ```
 
 ### Current limitations

@@ -2,7 +2,7 @@
 
 A WireHub **peer** is a network node running WireHub. Each peer has a Curve25519
 private key, used as a proof of its identity in the network. Its network address
-is its Curve25519 public key. The human-readable version of a peer address if
+is its Curve25519 public key. The human-readable version of a peer address is
 encoded with Base64 (e.g. `P17zMwXJF..._KX3w`).
 
 Peers form a Kademilia DHT. The distance function `XOR` is used to make peers
@@ -11,7 +11,7 @@ peers of one which is being looked up, peers are able to find the IPv6 or IPv6
 public address of another peer decentralizedly. Central servers may be provided,
 but the network keeps working if they are unreachable.
 
-Peers can form a **private networks**. A private network sets a list of
+Peers can form **private networks**. A private network sets a list of
 **trusted peers** which has each a private IP address and optionally a hostname.
 Application's network traffic of trusted peers are sent through WireGuard
 tunnels.
@@ -67,7 +67,7 @@ have the necessary amount of work bits will be rejected.
 The bigger the work bits, the more mitigated the sybil attack is. Each added
 work bit multiply by 2 the complexity of generating a new identity.
 
-## Getting starteg
+## Getting started
 
 The CLI tool to set up WireHub is `wh`. Make sure to enable auto-completion.
 
