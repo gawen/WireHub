@@ -21,8 +21,8 @@ testing only.
   discovery mechanism to find new peers. [Sybil attack][sybil] is mitigated with
   a configurable Proof-of-Work parameter;
 
-- **Peer-to-Peer communication**: WireHub goes through NATs using ([UPnP
-  IGD][igd]) to map new ports on compatible routers, or using [UDP Hole
+- **Peer-to-Peer communication**: WireHub goes through NATs, using [UPnP
+  IGD][igd] to map new ports on compatible routers, or using [UDP Hole
   Punching][udp-hole-punching] techniques.
 
 - **Relay communication**: if a peer-to-peer communication cannot be established, network
