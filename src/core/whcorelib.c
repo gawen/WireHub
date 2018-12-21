@@ -1362,7 +1362,7 @@ static int _ipc_list_cb(const char* name, void* ud) {
 
 static int _ipc_list(lua_State* L) {
     lua_newtable(L);
-    if (ipc_list(_ipc_list_cb, L)) {
+    if (ipc_list(_ipc_list_cb, L) && errno != ENOENT) {
         luaL_error(L, "IPC list failed: %s", strerror(errno));
     }
     return 1;
