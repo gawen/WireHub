@@ -76,7 +76,7 @@ Usage: wh <cmd> [<args>]
 Set up the minimal configuration for the `public` network.
 
 ```
-$ curl https://gawenr.keybase.pub/wirehub/bootstrap-unstable | wh setconf public -
+$ curl https://raw.githubusercontent.com/Gawen/WireHub/master/config/public | wh setconf public -
 ```
 
 An example configuration for the network `public` looks like this:
