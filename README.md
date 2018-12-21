@@ -140,15 +140,16 @@ interface gOVQwCSUxK, network public, node <>
 - **Zero-configuration networking with IPv6 [ORCHID][orchid] addresses**: every
   peer has an allocated IP address (see `wh orchid`);
 
+[docker]: https://www.docker.com/
+[igd]: https://en.wikipedia.org/wiki/Internet_Gateway_Device_Protocol
 [kademilia]: https://en.wikipedia.org/wiki/Kademlia
+[libpcap]: https://www.tcpdump.org/
 [libsodium]: https://download.libsodium.org/doc/
 [lua]: https://www.lua.org/
 [orchid]: https://datatracker.ietf.org/doc/rfc4843/
-[wh-docker]: https://hub.docker.com/r/wirehub/wh/
-[sandbox-docker]: https://hub.docker.com/r/wirehub/sandbox/
-[wireguard]: https://www.wireguard.com/
-[sybil]: https://en.wikipedia.org/wiki/Sybil_attack
 [pow]: https://en.wikipedia.org/wiki/Proof-of-work_system
-[igd]: https://en.wikipedia.org/wiki/Internet_Gateway_Device_Protocol
+[sandbox-docker]: https://hub.docker.com/r/wirehub/sandbox/
+[sybil]: https://en.wikipedia.org/wiki/Sybil_attack
 [udp-hole-punching]: https://en.wikipedia.org/wiki/UDP_hole_punching
-
+[wh-docker]: https://hub.docker.com/r/wirehub/wh/
+[wireguard]: https://www.wireguard.com/
