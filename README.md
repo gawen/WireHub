@@ -148,7 +148,7 @@ interface gOVQwCSUxK, network public, node <>
 
 ### Future
 
-- **Zero-configuration networking with IPv6 [ORCHID][orchid] addresses**: every
+- **Zero-configuration networking** with IPv6 [ORCHID][orchid] addresses: every
   peer has an allocated IP address (see `wh orchid`);
 
 [docker]: https://www.docker.com/
