@@ -45,8 +45,8 @@ testing only.
 ## Quickstart with Docker
 
 You can test WireHub with Docker with the image [`wirehub/wh`][wh-docker].
-There's a playground container [`wirehub/sandbox`][sandbox-docker] which is more
-comfortable to use (auto-completion enabled, debug tooling, live troubleshooting
+There's a playground container [`wirehub/sandbox`][sandbox-docker] which is
+handier to use (auto-completion enabled, debug tooling, live troubleshooting
 ready, ...).
 
 To build the Docker images manually,

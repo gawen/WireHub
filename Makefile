@@ -1,8 +1,8 @@
-.PHONY: all build clean run run-dbg run-vgd docker run-docker run-docker-dbg install-deps
+.PHONY: all build clean run run-dbg run-vgd docker run-docker run-docker-dbg
 
 SO = .obj/whcore.so
 SRC_C = $(wildcard src/core/*.c)
-OBJ_C = $(patsubst src/core/%.c,.obj/%.o,$(SRC_C))
+OBJ_C = $(patsubst src/core/%.c,.obj/%.o,$(SRC_C)) .obj/embeddable-wg.o
 
 EMBED_WG_PATH = deps/WireGuard/contrib/examples/embeddable-wg-library
 
@@ -16,36 +16,22 @@ else
 	MINIMAL_CFLAGS+=-O2
 endif
 
-CFLAGS=$(MINIMAL_CFLAGS) -Wextra
+CFLAGS=$(MINIMAL_CFLAGS) -Wextra -Ideps/WireGuard/contrib/examples/embeddable-wg-library
 WG_EMBED_CFLAGS=$(MINIMAL_CFLAGS)
 LDFLAGS=-lsodium -lpthread -lpcap -lminiupnpc
 
-
 all: build
-
-$(EMBED_WG_PATH)/wireguard.c:
-$(EMBED_WG_PATH)/wireguard.h:
-
-src/core/wireguard.c: $(EMBED_WG_PATH)/wireguard.c
-	cp $< $@
-
-src/core/wireguard.h: $(EMBED_WG_PATH)/wireguard.h
-	cp $< $@
-
-install-deps: \
-	src/core/wireguard.c \
-	src/core/wireguard.h
 
 build: $(SO)
 
-$(SO): install-deps $(OBJ_C)
+$(SO): $(OBJ_C)
 	$(CC) -shared -o $@ $(OBJ_C) $(LDFLAGS)
 ifeq ($(DEBUG), n)
 	strip $@
 endif
 	@ls -lh $@
 
-.obj/wireguard.o: src/core/wireguard.c
+.obj/embeddable-wg.o: $(EMBED_WG_PATH)/wireguard.c
 	$(CC) -c $< -o $@ $(WG_EMBED_CFLAGS)
 
 .obj/%.o: src/core/%.c
