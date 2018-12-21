@@ -29,22 +29,11 @@ testing only.
   traffic is relayed through trusted relayed servers, or at the very least peers
   from the community of WireHub nodes.
 
-## Dependencies
-
-- [Libpcap][libpcap]
-- [Libsodium][libsodium]
-- [Lua][lua]
-- [WireGuard][wireguard]
-- optionally, [Docker][docker]
-
-## Requirements
-
-- Linux or Docker
-- WireGuard
-
 ## Getting started
 
 ### Start a public peer
+
+[![demo](https://asciinema.org/a/217919.svg)](https://asciinema.org/a/217919?autoplay=1)
 
 Clone the current repository.
 
@@ -149,6 +138,8 @@ You may stop the WireHub peer as so:
 ```
 
 ### Create a simple private network
+
+[![demo](https://asciinema.org/a/217920.svg)](https://asciinema.org/a/217920?autoplay=1)
 
 Let's create a private network called `tutorial`, with two peers: `node_a` and
 `node_b`.
@@ -275,7 +266,20 @@ PING 10.0.42.2 (10.0.42.2): 56 data bytes
 ...
 ```
 
-### Current limitations
+## Dependencies
+
+- [Libpcap][libpcap]
+- [Libsodium][libsodium]
+- [Lua][lua]
+- [WireGuard][wireguard]
+- optionally, [Docker][docker]
+
+## Requirements
+
+- Linux or Docker
+- WireGuard
+
+## Current limitations
 
 - **Untrusted cryptography**: even if WireHub basics cryptographic routines are
   based on the trusted [Libsodium][libsodium], the WireHub cryptographic
@@ -292,7 +296,7 @@ PING 10.0.42.2 (10.0.42.2): 56 data bytes
 
 - and related to WireGuard, which is still under active development.
 
-### Future
+## Future
 
 - **GNU Name Service Switch plug-in** to allow name resolution of WireHub peers
   by common Linux programs (see `wh resolve`).

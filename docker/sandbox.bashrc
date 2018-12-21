@@ -14,16 +14,14 @@ function compile_micronet() {
     cp /tmp/micronet/bin/micronet /usr/local/bin
 }
 
-echo ""
+clear
 echo "#####################"
 echo "# wirehub's sandbox #"
 echo "#####################"
 echo ""
 
 
-if [ -z "$MICRONET" ]; then
-    echo "µnet is disabled. Will use default network."
-else
+if [ ! -z "$MICRONET" ]; then
     if [ -z "$MICRONET_SERVER" ]; then
         export MICRONET_SERVER=172.17.0.1
     fi
