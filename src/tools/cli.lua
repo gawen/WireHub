@@ -26,11 +26,41 @@ function help()
         "  show: Shows the current configuration\n" ..
         "\n" ..
         "Available advanced subcommands\n" ..
+        "  check-wg: Check that WireGuard is ready to be used\n" ..
         "  completion: Auto-completion helper\n" ..
         "  ipc: Send a IPC command to a WireHub daemon\n" ..
         "  orchid: Print the ORCHID IPv6 of a given node\n" ..
         ""
     )
+end
+
+function check_wg()
+    local r = wh.wg.check()
+
+    if r == 'oldkernel' then
+        printf(
+            "==========\n" ..
+            "$(red)$(bold)Sorry, Linux kernel must be >%s.$(reset)\n" ..
+            "More info: https://www.wireguard.com/install/#kernel-requirements\n" ..
+            "==========$(reset)\n",
+            string.join('.', wh.wg.LINUX_MINVER)
+        )
+
+        return false
+    elseif r == 'notloaded' then
+        printf(
+            "==========\n" ..
+            "$(red)$(bold)WireGuard module is not loaded!$(reset)\n" ..
+            "\n" ..
+            "    $(bold)You might want to install WireGuard first!$(reset)\n" ..
+            "    https://www.wireguard.com/install/\n" ..
+            "==========$(reset)\n"
+        )
+
+        return false
+    end
+
+    return true
 end
 
 require('wh')
@@ -43,6 +73,7 @@ SUBCMDS = {
     -- public methods
     "addconf",
     "authenticate",
+    "check-wg",
     "clearconf",
     "completion",
     "connect",
@@ -97,27 +128,7 @@ if cmd == 'help' or cmd == '--help' then
 end
 
 if cmd == 'up' then
-    local r = wh.wg.check()
-
-    if r == 'oldkernel' then
-        printf(
-            "==========\n" ..
-            "$(red)$(bold)Sorry, Linux kernel must be >%s.$(reset)\n" ..
-            "More info: https://www.wireguard.com/install/#kernel-requirements\n" ..
-            "==========$(reset)\n",
-            string.join('.', wh.wg.LINUX_MINVER)
-        )
-
-    elseif r == 'notloaded' then
-        printf(
-            "==========\n" ..
-            "$(red)$(bold)WireGuard module is not loaded!$(reset)\n" ..
-            "\n" ..
-            "    $(bold)You might want to install WireGuard first!$(reset)\n" ..
-            "    https://www.wireguard.com/install/\n" ..
-            "==========$(reset)\n"
-        )
-    end
+    check_wg()
 end
 
 disable_globals()
