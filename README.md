@@ -1,9 +1,9 @@
 # WireHub
 
 WireHub (in a shell, *wh*) is a simple, small, peer-to-peer, decentralized,
-extensible VPN. It goes through NATs. It uses [WireGuard tunnels][wireguard] and
-provides distributed peer discovery & routing capabilities, NAT trasversal,
-extendable name resolving, ...
+extensible VPN. It uses [WireGuard tunnels][wireguard] and provides distributed
+peer discovery & routing capabilities, NAT trasversal, extendable name
+resolving, ...
 
 It is written in C and Lua and is <10KLOC.
 
@@ -21,11 +21,11 @@ testing only.
   discovery mechanism to find new peers. [Sybil attack][sybil] is mitigated with
   a configurable Proof-of-Work parameter;
 
-- **Peer-to-Peer communication**: WireHub go through NATs using ([UPnP
+- **Peer-to-Peer communication**: WireHub goes through NATs using ([UPnP
   IGD][igd]) to map new ports on compatible routers, or using [UDP Hole
-  Punching][udp-hole-punching].
+  Punching][udp-hole-punching] techniques.
 
-- **Relay communication**: if a P2P communication cannot be established, network
+- **Relay communication**: if a peer-to-peer communication cannot be established, network
   traffic is relayed through trusted relayed servers, or at the very least peers
   from the community of WireHub nodes.
 
@@ -61,7 +61,7 @@ $ make docker-sandbox
 Start a sandbox,
 
 ```
-$ docker run -it wirehub/sandbox --cap-add NET_ADMIN wirehub /bin/bash
+$ docker run -it --cap-add NET_ADMIN wirehub/sandbox /bin/bash
 ```
 
 Make sure WireHub is installed.
@@ -76,7 +76,7 @@ Usage: wh <cmd> [<args>]
 Set up the minimal configuration for the `public` network.
 
 ```
-$ curl https://gawenr.keybase.pub/wirehub/bootstrap-unstable | wh setconf public
+$ curl https://gawenr.keybase.pub/wirehub/bootstrap-unstable | wh setconf public -
 ```
 
 An example configuration for the network `public` looks like this:
