@@ -16,6 +16,9 @@ testing only.
 - **Easy management of networks**: a network is defined by a single configuration
   file which lists trusted peers.
 
+- **Cryptographic network addresses**: the network address of a peer is - or
+  derived from - a [Curve25519][curve25519] public key.
+
 - **Decentralized discovery**: WireHub peers form a [Kademilia
   DHT][kademilia] network which is the by-default
   discovery mechanism to find new peers. [Sybil attack][sybil] is mitigated with
@@ -335,6 +338,7 @@ node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV
 - **Zero-configuration networking** with IPv6 [ORCHID][orchid] addresses: every
   peer has an allocated IP address (see `wh orchid`);
 
+[curve25519]: https://cr.yp.to/ecdh.html
 [docker]: https://www.docker.com/
 [igd]: https://en.wikipedia.org/wiki/Internet_Gateway_Device_Protocol
 [kademilia]: https://en.wikipedia.org/wiki/Kademlia
