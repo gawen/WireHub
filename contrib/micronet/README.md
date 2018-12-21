@@ -33,7 +33,7 @@ M(W | nat{up_ip=subnet('1.1.1.2', 0), mode=NAT_FULL_CONE} | peer())
 
 - **ICMP echo and echo reply**: used for network pings;
 
-- **UDP**: used by WireHub;
+- **UDP**: used by WireGuard and WireHub;
 
 - **Extensible network componenets with Lua**: network components can be
   customized in Lua (see the NAT component).
