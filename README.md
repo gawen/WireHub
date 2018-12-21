@@ -49,6 +49,17 @@ There's a playground container [`wirehub/sandbox`][sandbox-docker] which is more
 comfortable to use (auto-completion enabled, debug tooling, live troubleshooting
 ready, ...).
 
+To build the Docker images manually,
+
+```
+$ git clone https://github.com/Gawen/WireHub
+$ cd WireHub
+$ git submodule update --init
+$ make docker-sandbox
+```
+
+Start a sandbox,
+
 ```
 $ docker run -it wirehub/sandbox --cap-add NET_ADMIN wirehub /bin/bash
 ```
