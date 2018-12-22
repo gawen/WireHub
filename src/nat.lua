@@ -1,3 +1,7 @@
+-- NAT discovery mechanism
+--
+-- Like STUN, but way ligther and less complete
+
 local time = require('time')
 local packet = require('packet')
 local peer = require('peer')
@@ -74,7 +78,6 @@ function M.update(n, d, deadlines)
     assert(deadline ~= nil)
     deadlines[#deadlines+1] = deadline
 end
-
 
 function M.on_pong(n, body, src)
     for d in pairs(n.nat_detectors) do

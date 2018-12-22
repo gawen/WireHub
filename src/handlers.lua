@@ -6,14 +6,15 @@ local kad = require('kad')
 local nat = require('nat')
 local search = require('search')
 
-local H = {}
-
 local function log_cmd(n, m, src, fmt, ...)
     --printf("%s - %s - %d - %s", src, wh.todate(now), #m, string.format(fmt, ...))
     if n.log >= 2 then
         printf("%s -> :%d: %s (%dB)", src, n.port, string.format(fmt, ...), #m)
     end
 end
+
+-- Table of WireHub packet handlers
+local H = {}
 
 H[packet.cmds.ping] = function(n, m, src, via)
     local arg = string.sub(m, 2, 2)

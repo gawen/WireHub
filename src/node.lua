@@ -1,3 +1,5 @@
+-- WireHub node manager
+
 local handlers = require('handlers')
 local packet = require('packet')
 local peer = require('peer')
@@ -176,12 +178,6 @@ function MT.__index.update(n, socks)
 
         n.bw:collect()
     end
-
-    --if DEBUG then
-    --    for k, p in pairs(n.kad.touched) do
-    --        dbg('touched %s', p)
-    --    end
-    --end
 
     return min(deadlines)
 end

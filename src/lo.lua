@@ -1,3 +1,19 @@
+-- Loopback Management
+--
+-- Application network traffic going through the WireGuard tunnel might be
+-- directed to peers whose routes are not known yet, or be relayed through the
+-- DHT if no peer-to-peer communications were possible.
+--
+-- Therefore, WireGuard traffic needs to be redirected to the WireHub daemon to
+-- be routed. To do so, unknown or relayed peers have their WireGuard endpoints
+-- directed to a loopback address (127.0.0.0/8), which are binded by WireHub.
+-- WireGuard traffic is received by WireHub, which takes the right action to
+-- redirect the traffic to the WireGuard instances of the destination peers.
+--
+-- This module defines this loopback mechanism (called "tunnels") and redirect
+-- ingoing and outgoing traffic to/from WireGuard. It searches for peers whose
+-- route is unknown, or relay traffic if necessary
+
 local TRY_AUTOCONNECT_EVERY_S = 60
 
 local MT = {

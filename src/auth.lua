@@ -1,3 +1,14 @@
+-- WireHub authentication
+--
+-- An alias is a secret key given to a peer to authenticate itself. It is used
+-- to add a peer to a network when its public key is not known yet.
+--
+-- Peer A wants to add peer B, but does not know B's key. Peer A generates a
+-- secret key and stores it as an alias of peer B. Peer B is given this alias
+-- through a secure channel (e.g. GPG, Keybase, ...), and sends a packet `AUTH`
+-- to peer A to prove it knows the alias secret key. Peer A will then discover
+-- peer A's key and register it as a new trusted peer.
+
 local packet = require('packet')
 
 local M = {}

@@ -1,3 +1,7 @@
+-- WireHub configuration reader/writer
+
+-- Parse generic "INI-like" configuration content and returns a table with all
+-- fields.
 local function parseconf(conf)
     if not conf then return end
 
@@ -31,6 +35,7 @@ local function parseconf(conf)
     return entry
 end
 
+-- Deserialize WireHub configuration content
 function wh.fromconf(conf)
     if not conf then return end
 
@@ -108,6 +113,7 @@ function wh.fromconf(conf)
     return r
 end
 
+-- Serialize WireHub configuration data
 function wh.toconf(conf)
     local r = {}
 

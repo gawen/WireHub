@@ -1,3 +1,31 @@
+-- Main WireHub server daemon
+--
+-- This file initializes and runs a WireHub peer. The overall structure of the
+-- file is the following:
+--
+--   Parse CLI arguments
+--   Read the private network configuration
+--   Check WireGuard interface, if any
+--   Initialize a WireHub node (wh.new())
+--   Initialize WireHub IPC server
+--   Configure WireHub with peers (trusted, bootstrap, ...)
+--   Initialize loopback manager
+--   Initialize WireGuard <-> WireHub synchronization manager
+--
+--   while running do    -- main loop
+--       list file descriptors to wait for and ...
+--       ... calculate next deadline for the I/O event poller
+--
+--       wait for I/O events
+--
+--       ask managers to read readable file descriptors
+--   end
+--
+--   De-initialize wgsync
+--   De-initialize loopback manager
+--   De-initialize WireHub node
+--   Exit
+
 local cmd = arg[1]
 
 function help()
@@ -256,10 +284,13 @@ local LOADING_CHARS = {'-', '\\', '|', '/'}
 local LOADING_CHARS = {'▄▄', '█▄', '█ ', '█▀', '▀▀', '▀█', ' █', '▄█'}
 local lc_idx = 1
 
+-- main loop
 now = wh.now()
 while n.running do
     local socks = {}
     local timeout
+
+    -- update file descriptors to poll and next deadlines
     do
         local deadlines = {}
         deadlines[#deadlines+1] = n:update(socks)
@@ -282,6 +313,7 @@ while n.running do
         end
     end
 
+    -- XXX
     do
         if self.ip ~= n.p.ip then
             self.ip = n.p.ip
@@ -309,6 +341,7 @@ while n.running do
 
     n.kad:clear_touched()
 
+    -- I/O event poller
     local r
     do
         -- Not sure why, but one pcall is not enough to catch the "interrupted"
@@ -323,6 +356,7 @@ while n.running do
         status('%s', LOADING_CHARS[lc_idx])
     end
 
+    -- notify something needs to be read
     do
         n:on_readable(r)
 

@@ -1,3 +1,7 @@
+-- Entry-point of 'wh'
+--
+-- Read sub-commands and load the subcommands Lua program
+
 function help()
     print(
         "Usage: wh <cmd> [<args>]\n" ..

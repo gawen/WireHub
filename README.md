@@ -315,21 +315,29 @@ node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV
 
 ## Current limitations
 
-- **Automatic testing**: a lot of work needs to be done to make real automatic
-  testing possible with WireHub. Current efforts are on [`micronet`][micronet].
+- **Still panic**: still quite rough to use. Do not expect the daemon to be stable;
 
 - **Untrusted cryptography**: even if WireHub basics cryptographic routines are
   based on the trusted [Libsodium][libsodium], the WireHub cryptographic
   architecture has not been audited yet. If you're interested to contribute on
   this part, help is very welcome!
 
-- **Still panic**: still quite rough to use. Do not expect the daemon to be stable;
+- **Automatic testing**: a lot of work needs to be done to make real automatic
+  testing possible with WireHub. Current efforts are on [`micronet`][micronet].
+
+- **Poor documentation**: WireHub was a personal project and lacks
+  documentation. While this will be progressively solved in the future, in the
+  meantime, feel free to get in touch if you have any question regarding the
+  internals.
 
 - **For a relayed peer, only one relay is used**: the traffic is not distributed
   yet between several relays, which makes a single point of failure of WireHub
   relay mechanisms;
 
 - **Only IPv4**: implemeting IPv6 requires some additional work;
+
+- **Only tested on x86_64**: testing on ARM architectures were unsucessful. x86
+  has not been tested yet.
 
 - and related to WireGuard, which is still under active development.
 
@@ -340,6 +348,18 @@ node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV
 
 - **Zero-configuration networking** with IPv6 [ORCHID][orchid] addresses: every
   peer has an allocated IP address (see `wh orchid`);
+
+## Overall source code architecture
+
+WireHub's source code is stored in `src/`. `wh.lua` is the main Lua module to
+import WireHub's engine.
+
+The source code of the CLI tool `wh` is stored in `src/tools/`. Its entry point is `src/tools/cli.lua`.
+
+The core of WireHub is written in C and stored in `src/core/`. It is a native
+Lua module called `whcore`, defined in `src/core/whcorelib.c`.
+
+Please refer to the documentation in each files for more info.
 
 [curve25519]: https://cr.yp.to/ecdh.html
 [docker]: https://www.docker.com/

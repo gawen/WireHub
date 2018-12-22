@@ -1,3 +1,20 @@
+-- Bandwith Logger
+--
+--   -- bandwidth logger with a scale of 1 second
+--   local bw = require('bwlog'){scale = 1.0}
+--
+--   -- packet was received from peer A
+--   bw:add_rx(A.k, #me)
+--
+--   -- packet is sent to peer A
+--   bw:add_tx(A.k, #me)
+--
+--   -- Calculate stats
+--   bw:avg()
+--
+--   -- If method 'avg()' is not called regurarly, remove old history
+--   bw:collect()
+
 local queue = require('queue')
 
 local MT = {

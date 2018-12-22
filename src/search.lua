@@ -1,3 +1,21 @@
+-- Peer DHT searching logic
+--
+-- Requests consecutively peers to find the WAN IP address of a searched peer.
+--
+-- Search have 3 modes:
+-- * 'lookup': when a route for the searched peer is found, stop the search. The
+--             route might go through a relay. No peer-to-peer communication is
+--             initialized.
+--
+-- * 'ping':   like 'lookup', but send a PING to the searched peer to check if
+--             it is reachable/online. No peer-to-peer communication is
+--             initialized.
+--
+-- * 'p2p':    like 'ping', but initialize a peer-to-peer communication with UDP
+--             hole punching, if necessary.
+--
+
+
 local peer = require('peer')
 local packet = require('packet')
 

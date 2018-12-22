@@ -1,3 +1,5 @@
+-- Generic FIFO queue implementation
+
 local M = {}
 
 function M.push(q, e)

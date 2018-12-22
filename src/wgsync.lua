@@ -1,3 +1,11 @@
+-- WireGuard <-> WireHub synchronization
+--
+-- Configure WireGuard with latest WireHub metadata about peers. Set keys,
+-- endpoints, persistent keep-alive, ...
+--
+-- Update the last time each peer was seen by WireGuard, to have a unified view
+-- for WireHub and WireGuard.
+
 -- XXX handles sync from wg to wh
 
 local REFRESH_EVERY = wh.NAT_TIMEOUT / 2

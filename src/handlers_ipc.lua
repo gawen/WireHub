@@ -1,3 +1,6 @@
+-- IPC command handlers
+-- See ipc.lua
+
 return function(n)
     local H = {}
 

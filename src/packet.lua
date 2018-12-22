@@ -1,14 +1,34 @@
+-- WireHub protocol packets
+
 local M = {}
 
 local cmds = {
+    -- PING. Requests a peer to PONG.
     'ping',
+
+    -- PONG. Response of the request PING.
     'pong',
+
+    -- SEARCH. Search for closest peers for a given key.
     'search',
+
+    -- RESULT. Response of a SEARCH.
     'result',
+
+    -- RELAY. Request recipient to relay WireHub packet to a given peer.
     'relay',
+
+    -- RELAYED. Sends a relayed packet to and for a recipient. Is sent after a
+    -- RELAY.
     'relayed',
+
+    -- AUTH. Prove recipient that current peer has an alias.
     'auth',
+
+    -- AUTHED. Response after a AUTH, as authentication succeeded.
     'authed',
+
+    -- FRAGMENT. Send fragments of raw data. Used to relay WireGuard packets.
     'fragment',
 }
 for i, str in ipairs(cmds) do cmds[str] = string.pack("B", i-1) end

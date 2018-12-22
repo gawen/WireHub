@@ -1,3 +1,7 @@
+-- IPC server
+--
+-- Used by the WireHub CLI tool. Listens on a UNIX socket and serves.
+
 local MT = {__index = {}}
 local I = MT.__index
 
