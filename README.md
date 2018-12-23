@@ -305,6 +305,7 @@ node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV
 - [Libpcap][libpcap]
 - [Libsodium][libsodium]
 - [Lua][lua]
+- [miniupnpc][miniupnpc]
 - [WireGuard][wireguard]
 - optionally, [Docker][docker]
 
@@ -369,6 +370,7 @@ Please refer to the documentation in each files for more info.
 [libsodium]: https://download.libsodium.org/doc/
 [lua]: https://www.lua.org/
 [micronet]: https://github.com/Gawen/WireHub/tree/master/contrib/micronet
+[miniupnpc]: http://miniupnp.free.fr/
 [netcat]: https://en.wikipedia.org/wiki/Netcat
 [orchid]: https://datatracker.ietf.org/doc/rfc4843/
 [pow]: https://en.wikipedia.org/wiki/Proof-of-work_system
