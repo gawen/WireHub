@@ -149,11 +149,13 @@ static int _on_readable(lua_State* L) {
             luaL_error(L, "deserialization failed");
         }
 
-        lua_pushvalue(L, 2);
-        lua_gettable(L, LUA_REGISTRYINDEX);
+        int ref = lua_tointeger(L, 2);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ref);
         assert (lua_type(L, -1) == LUA_TFUNCTION);
         lua_replace(L, 2);
         lua_call(L, lua_gettop(L)-2, 0);
+
+        luaL_unref(L, LUA_REGISTRYINDEX, ref);
     }
 
     return 0;
