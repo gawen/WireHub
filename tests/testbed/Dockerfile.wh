@@ -13,4 +13,6 @@ RUN printf "** WireHub Testing Node\n\n" > /etc/motd
 
 COPY --from=micronet /usr/local/bin/micronet /usr/local/bin/micronet
 
+ENV WH_LOGPATH /tmp/log
+
 CMD ["telnetd", "-F"]
