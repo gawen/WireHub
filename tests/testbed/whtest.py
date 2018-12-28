@@ -25,6 +25,19 @@ def constant(func):
         return getattr(self, attr)
     return wrapper
 
+def retry(count=6, wait=0.5):
+    def decorator(f):
+        for _ in range(count):
+            if f():
+                break
+
+            time.sleep(wait)
+
+        else:
+            raise Exception(f"failed after {count} retry/ies.")
+
+    return decorator
+
 
 PREFIX = "wh-testbed-"
 
