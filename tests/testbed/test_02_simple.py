@@ -41,7 +41,9 @@ def test_ping():
 
             wh(*cmd, blocking=False)
 
-        time.sleep(2)
+            @retry()
+            def f():
+                return wh.inspect(k) != None
 
         # get ipc
         for peer_id, n in e.nodes.items():
@@ -49,6 +51,6 @@ def test_ping():
 
             with n.wh() as wh:
                 #print("all", repr(wh("show", "all")))
-                print("specific", repr(wh("ipc", k, "dumpkad")))
+                print("specific", repr(wh.inspect(k)))
 
-        assert False
+
