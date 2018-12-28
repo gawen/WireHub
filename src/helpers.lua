@@ -83,6 +83,89 @@ function dump(x, level)
     end
 end
 
+local function is_table_list(t)
+    for k, v in pairs(t) do
+        if type(k) ~= 'number' or 1 > k or k > #t then
+            return false
+        end
+    end
+
+    return true
+end
+
+function dump_json(x, level)
+    level = level or 0
+
+    if type(x) == 'table' and is_table_list(x) then
+        local r = {'['}
+
+        level = level + 1
+        for i, v in ipairs(x) do
+            if i > 1 then r[#r+1] = ',' end
+            r[#r+1] = '\n'
+            r[#r+1] = string.rep('  ', level) .. dump_json(v, level)
+        end
+        level = level - 1
+
+        r[#r+1] = '\n' .. string.rep('  ', level) .. ']'
+        return table.concat(r)
+
+    elseif type(x) == 'table' then      -- map
+        local function format_k(k)
+            if type(k) == 'number' then
+                k = tostring(k)
+            end
+
+            if type(k) == 'string' then
+                return dump_json(k)
+            else
+                -- XXX check for invalid Lua characters for key
+                return tostring(k)
+            end
+        end
+
+        local r = {'{'}
+
+        level = level + 1
+
+        local keys = {}
+        for k in pairs(x) do keys[#keys+1] = k end
+        table.sort(keys, function(a,b)
+            local a_type = type(a)
+            local b_type = type(b)
+
+            if a_type ~= b_type then
+                a = a_type
+                b = b_type
+            end
+
+            return a < b
+        end)
+        for i, k in ipairs(keys) do
+            local v = x[k]
+
+            if i > 1 then r[#r+1] = ',' end
+            r[#r+1] = '\n'
+
+            r[#r+1] = string.rep('  ', level) .. string.format('%s: %s', format_k(k), dump_json(v, level))
+        end
+        level = level - 1
+
+        r[#r+1] = '\n' .. string.rep('  ', level) .. '}'
+
+        return table.concat(r)
+    elseif type(x) == 'string' then
+        if #x == 32 then
+            x = wh.tob64(x)
+        end
+
+        return string.format('%q', x)
+    elseif type(x) == 'userdata' then
+        return dump_json(tostring(x))
+    else
+        return tostring(x)
+    end
+end
 function parsearg(idx, fields)
     local state = {}
     while true do
