@@ -1,4 +1,4 @@
-.PHONY: all build clean run run-dbg run-vgd docker run-docker run-docker-dbg
+.PHONY: all build clean run run-dbg run-vgd docker run-docker run-docker-dbg docker-testbed docker-micronet
 
 SO = .obj/whcore.so
 SRC_C = $(wildcard src/core/*.c)
@@ -72,3 +72,10 @@ run-sandbox-nomount:
 
 run-root1:
 	docker run -d --cap-add NET_ADMIN --network=host --name wh-root1 wirehub/root1
+
+docker-micronet:
+	make -C contrib/micronet docker
+
+docker-testbed: docker docker-micronet
+	docker build -t wirehub/testbed-wh -f tests/testbed/Dockerfile.wh tests/testbed
+

@@ -1,0 +1,16 @@
+FROM wirehub/micronet AS micronet
+
+FROM wirehub/wh AS wh
+
+RUN apk add --no-cache \
+    bash \
+    busybox-extras \
+    lua5.3
+
+# enable root login through telnetd
+RUN printf "pts/0\npts/1\npts/2\npts/3\npts/4\npts/5\npts/6\npts/7\npts/8\npts/9\n" >> /etc/securetty
+RUN printf "** WireHub Testing Node\n\n" > /etc/motd
+
+COPY --from=micronet /usr/local/bin/micronet /usr/local/bin/micronet
+
+CMD ["telnetd", "-F"]
