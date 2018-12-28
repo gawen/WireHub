@@ -5,6 +5,7 @@ import contextlib
 import docker
 import functools
 import io
+import json
 import logging
 import os
 import tarfile
@@ -261,6 +262,19 @@ class WHClient:
         k = self("pubkey", stdin=sk)
 
         return sk, k
+
+    def inspect(self, interface):
+        buf = self('inspect', interface)
+
+        if not buf:
+            return None
+
+        try:
+            return json.loads(buf)
+
+        except:
+            print(buf)
+            raise
 
 class Node(Container):
     def __init__(self, c, net, name, logger):
