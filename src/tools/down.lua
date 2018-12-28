@@ -3,7 +3,7 @@ function help()
 end
 
 local interface = arg[2]
-if not interface then
+if not interface or interface == 'help' then
     return help()
 end
 
