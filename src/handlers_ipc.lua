@@ -30,13 +30,38 @@ return function(n)
         end)
     end
 
-    H['dump ([^%s]+)'] = function(send, close, k)
+    H.inspect = function(send, close)
+        local r = {
+            version=wh.version,
+            peers={},
+            opts=opts,
+            key=wh.publickey(n.sk),
+            port=n.port,
+        }
+
+        for bid, bucket in pairs(n.kad.buckets) do
+            for i, p in ipairs(bucket) do
+
+                local d = {}
+                for k, v in pairs(p) do d[k] = v end
+                d.bid = bid
+
+                r.peers[#r.peers+1] = d
+            end
+        end
+
+        send(dump_json(r) .. '\n')
+
+        return close()
+    end
+
+    H['inspect_peer ([^%s]+)'] = function(send, close, k)
         return n:getent(k, function(k)
             if k then
                 local p = n.kad:get(k)
 
                 if p then
-                    send(dump(p))
+                    send(dump_json(p))
                 end
             end
 
@@ -106,20 +131,6 @@ return function(n)
             end
         end
 
-        return close()
-    end
-
-    function H.dumpkad(send, close)
-        for bid, bucket in pairs(n.kad.buckets) do
-            for i, p in ipairs(bucket) do
-
-                local d = {}
-                for k, v in pairs(p) do d[k] = v end
-                d.bid = bid
-
-                send("%s", dump(d) .. '\n')
-            end
-        end
         return close()
     end
 

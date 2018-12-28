@@ -32,6 +32,7 @@ function help()
         "Available advanced subcommands\n" ..
         "  check-wg: Check that WireGuard is ready to be used\n" ..
         "  completion: Auto-completion helper\n" ..
+        "  inspect: Return low-level information on WireHub network\n" ..
         "  ipc: Send a IPC command to a WireHub daemon\n" ..
         "  orchid: Print the ORCHID IPv6 of a given node\n" ..
         ""
@@ -85,6 +86,7 @@ SUBCMDS = {
     "forget",
     "genkey",
     "help",
+    "inspect",
     "ipc",
     "lookup",
     "orchid",

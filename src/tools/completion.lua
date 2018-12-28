@@ -127,6 +127,7 @@ if cur_idx == 2 then
         subcmd == 'connect' or
         subcmd == 'down' or
         subcmd == 'forget' or
+        subcmd == 'inspect' or
         subcmd == 'ipc' or
         subcmd == 'lookup' or
         subcmd == 'ping' or
