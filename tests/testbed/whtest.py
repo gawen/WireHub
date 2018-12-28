@@ -135,7 +135,11 @@ class Shell:
         self.t.write(line)
 
         if blocking:
-            self.t.read_until(b"\r\n")
+            while True:
+                buf = self.t.read_until(b"\r\n")
+                if not buf.endswith(b'\r\r\n'):
+                    break
+
             log = self.t.read_until(self.PS1)
 
             assert(log.endswith(self.PS1))
