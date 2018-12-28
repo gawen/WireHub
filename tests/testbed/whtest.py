@@ -114,6 +114,7 @@ class Shell:
     def __init__(self, ip, logger):
         self.ip = ip
         self.logger = logger
+        self._value = None
 
         self.t = telnetlib.Telnet(self.ip)
         self.t.read_until(b"login:")
@@ -132,6 +133,7 @@ class Shell:
 
         self.logger.info(f"# {cmd}")
 
+        self._value = None
         self.t.write(line)
 
         if blocking:
@@ -166,7 +168,10 @@ class Shell:
 
     @property
     def value(self):
-        return int(self("echo $?"))
+        if self._value is None:
+            self._value = int(self("echo $?"))
+
+        return self._value
 
 class Container:
     def __init__(self, logger):
