@@ -298,14 +298,23 @@ class Node(Container):
         self.name = name
 
     def start(self):
-        self.ct = self.c.containers.run(
+        kwargs = dict(
             image="wirehub/testbed-wh",
             cap_add = ("NET_ADMIN", ),
             detach=True,
             hostname=self.name,
             name=self.name,
             network=self.net.name,
+            volumes={},
         )
+
+        if os.environ.get("WH_DEBUG").lower() == "y":
+            repo_path = os.path.dirname(__file__)
+            repo_path = os.path.normpath(os.path.join(repo_path, "../../src"))
+
+            kwargs['volumes'][repo_path] = {'bind': '/opt/wh', 'mode': 'ro'}
+
+        self.ct = self.c.containers.run(**kwargs)
 
     def start_micronet(self, server_ip, peer_id):
         sh = self.shell()
