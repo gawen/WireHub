@@ -38,7 +38,6 @@ def retry(count=6, wait=0.5):
 
     return decorator
 
-
 PREFIX = "wh-testbed-"
 
 def check_images(c):
@@ -260,7 +259,7 @@ class WHClient:
             ))
 
         cmd.append("wh")
-        cmd.extend(kargs)
+        cmd.extend(map(str, kargs))
 
         for k, v in sorted(kwargs.items()):
             if v is True:
@@ -369,6 +368,14 @@ class Env:
     def peer_count(self):
         return max(k for k, v in self.unet_desc.items() if v["type"] == "peer")
 
+    @property
+    def _priv_node(self):
+        return self.nodes[1]
+
+    @constant
+    def _priv_wh(self):
+        return self._priv_node.wh()
+
     def start(self):
         self.logger.info(f"initialize network")
 
@@ -422,6 +429,41 @@ class Env:
 
     def __getitem__(self, i):
         return self.nodes[i]
+
+    def lua(self, script, *kargs):
+        write_file(self._priv_node.ct, "/tmp/script.lua", script.encode('utf-8'))
+        return self._priv_wh.sh("LUA_PATH=/opt/wh/?.lua lua /tmp/script.lua " + " ".join(map(str, kargs)))
+
+    def wh(self, *kargs, **kwargs):
+        r = {}
+        for peer_id, n in self.nodes.items():
+            with n.wh() as wh:
+                r[peer_id] = wh(*kargs, **kwargs)
+
+        return r
+
+    def setup_public(self, bootstrap_ip='1.1.1.1', workbit=8):
+        """ Setup a network where first peer is a bootstrap. """
+
+        bstp_n = self.nodes[1]
+
+        # setup network
+        self.wh("clearconf", "public")
+        self.wh("set", "public", workbit=8)
+
+        # generate keys for network
+        for peer_id, n in self.nodes.items():
+            with n.wh() as wh:
+                n.sk, n.k = wh.genkey("public")
+                wh.sh(f"echo {n.sk} > /sk")
+                wh.sh(f"echo {n.k} > /k")
+
+        # setup bootstrap
+        self.wh("set", "public", endpoint=bootstrap_ip, bootstrap="yes", untrusted=True, peer=bstp_n.k)
+
+        # start bootstrap
+        bstp_n.daemon_wh = bstp_n.wh()
+        bstp_n.daemon_wh("up", "public", "private-key", "/sk", "mode", "direct", blocking=False)
 
 @contextlib.contextmanager
 def env(*kargs, **kwargs):
