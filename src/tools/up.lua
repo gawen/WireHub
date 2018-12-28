@@ -187,7 +187,7 @@ atexit(n.close, n)
 
 local ipc_conn
 local handlers = require('handlers_ipc')(n)
-ipc_conn = require('ipc').bind(opts.interface or wh.key(n.k), handlers)
+ipc_conn = require('ipc').bind(opts.interface or wh.tob64(n.k), handlers)
 atexit(ipc_conn.close, ipc_conn)
 
 --
