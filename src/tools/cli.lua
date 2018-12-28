@@ -30,6 +30,7 @@ function help()
         "  show: Shows the current configuration\n" ..
         "\n" ..
         "Available advanced subcommands\n" ..
+        "  bid: Calculate BID between two keys\n" ..
         "  check-wg: Check that WireGuard is ready to be used\n" ..
         "  completion: Auto-completion helper\n" ..
         "  inspect: Return low-level information on WireHub network\n" ..
@@ -78,6 +79,7 @@ SUBCMDS = {
     -- public methods
     "addconf",
     "authenticate",
+    "bid",
     "check-wg",
     "clearconf",
     "completion",
