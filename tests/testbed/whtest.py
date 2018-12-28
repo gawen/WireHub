@@ -97,8 +97,9 @@ def read_micronet_conf(c, micronet_conf):
 class Shell:
     PS1 = b"telnet# "
 
-    def __init__(self, ip):
+    def __init__(self, ip, logger):
         self.ip = ip
+        self.logger = logger
 
         self.t = telnetlib.Telnet(self.ip)
         self.t.read_until(b"login:")
@@ -107,11 +108,15 @@ class Shell:
         self.t.write(b"export PS1=\"" + self.PS1 + b"\"\n")
         self.t.read_until(b"\n" + self.PS1)
 
-    def execute(self, cmd, encoding='utf-8', blocking=True):
+    def execute(self, cmd, encoding='utf-8', blocking=None):
+        if blocking is None: blocking = True
+
         line = f"{cmd}\n"
 
         if encoding is not None:
             line = line.encode(encoding)
+
+        self.logger.info(f"# {cmd}")
 
         self.t.write(line)
 
@@ -125,7 +130,13 @@ class Shell:
             if encoding is not None:
                 log = log.decode(encoding)
 
+            if log:
+                self.logger.info(f"> {log}")
+
             return log
+
+        else:
+            self.logger.info("> (non blocking)")
 
     __call__ = execute
 
@@ -140,7 +151,8 @@ class Shell:
         return int(self("echo $?"))
 
 class Container:
-    def __init__(self):
+    def __init__(self, logger):
+        self.parent_logger = logger
         self.ct = None
 
     def stop(self):
@@ -151,6 +163,10 @@ class Container:
 
             self.ct.remove()
             self.ct = None
+
+    @constant
+    def logger(self):
+        return self.parent_logger.getChild(self.hostname)
 
     @constant
     def ip(self):
@@ -166,11 +182,11 @@ class Container:
         return self.ct.attrs['Config']['Hostname']
 
     def shell(self):
-        return Shell(self.ip)
+        return Shell(self.ip, self.logger)
 
 class Micronet(Container):
-    def __init__(self, c, net, unet_conf, name):
-        super().__init__()
+    def __init__(self, c, net, unet_conf, name, logger):
+        super().__init__(logger)
 
         self.c = c
         self.net = net
@@ -192,6 +208,11 @@ class Micronet(Container):
         self.ct.start()
 
 class WHClient:
+    class Error(Exception):
+        def __init__(self, value):
+            self.value = value
+            super().__init__(f"returned value is not 0: {value}")
+
     def __init__(self, sh):
         self.sh = sh
 
@@ -202,14 +223,24 @@ class WHClient:
     def __exit__(self, *exc):
         self.sh.__exit__(*exc)
 
-    def showconf(self, conf):
-        return self.sh(f"wh showconf \"{conf}\"")
+    def __call__(self, *kargs, **kwargs):
+        cmd = []
 
-    def set(self, conf, **kwargs):
-        cmd = ["wh set", conf]
+        blocking = kwargs.pop("blocking", True)
+
+        stdin = kwargs.pop("stdin", None)
+        if stdin is not None:
+            cmd.extend((
+                "echo",
+                stdin,
+                "|",
+            ))
+
+        cmd.append("wh")
+        cmd.extend(kargs)
 
         for k, v in sorted(kwargs.items()):
-            if v == True:
+            if v is True:
                 cmd.append(k)
 
             else:
@@ -217,17 +248,23 @@ class WHClient:
                 cmd.append(str(v))
 
         cmd = " ".join(cmd)
-        return self.sh(cmd)
+        log = self.sh(cmd, blocking=blocking)
+
+        #if blocking:
+        #    if self.sh.value != 0:
+        #        raise self.Error(sh.value)
+
+        return log
 
     def genkey(self, conf):
-        sk = self.sh(f"wh genkey {conf}")
-        k = self.sh(f"echo \"{sk}\" | wh pubkey")
+        sk = self("genkey", conf)
+        k = self("pubkey", stdin=sk)
 
         return sk, k
 
 class Node(Container):
-    def __init__(self, c, net, name):
-        super().__init__()
+    def __init__(self, c, net, name, logger):
+        super().__init__(logger)
 
         self.c = c
         self.net = net
@@ -296,29 +333,47 @@ class Env:
         )
 
         self.logger.info("run micronet network")
-        self.unet = Micronet(self.c, self.net, self.unet_conf, f"{self.prefix}-micronet")
+        self.unet = Micronet(
+            c=self.c,
+            net=self.net,
+            unet_conf=self.unet_conf,
+            name=f"{self.prefix}-micronet",
+            logger=self.logger
+        )
+
         self.unet.start()
 
         for i in range(self.peer_count):
             peer_id = i+1
 
             self.logger.info(f"run node #{peer_id}")
-            n = Node(self.c, self.net, f"{self.prefix}-{peer_id}")
+            self.nodes[peer_id] = n = Node(
+                c=self.c,
+                net=self.net,
+                name=f"{self.prefix}-{peer_id}",
+                logger=self.logger
+            )
+
             n.start()
             n.start_micronet(self.unet.ip, peer_id)
 
             with n.shell() as sh:
                 sh("rm -f /etc/wirehub/*")
 
-            self.nodes[peer_id] = n
 
     def stop(self):
         self.logger.info("stopping environment")
-        for n in self.nodes.values():
+        for peer_id, n in sorted(self.nodes.items()):
+            self.logger.info(f"stop node #{peer_id}")
             n.stop()
 
         if self.unet:
+            self.logger.info(f"stop micronet")
             self.unet.stop()
+
+        if self.net:
+            self.logger.info(f"remove network")
+            self.net.remove()
 
     def __getitem__(self, i):
         return self.nodes[i]
@@ -332,4 +387,9 @@ def env(*kargs, **kwargs):
 
     finally:
         e.stop()
+
+@contextlib.contextmanager
+def env_single_node():
+    with env("M(wan() | peer())") as e:
+        yield e.nodes[1]
 
