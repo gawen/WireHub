@@ -125,15 +125,22 @@ class Shell:
         self.t.write(b"export PS1=\"" + self.PS1 + b"\"\n")
         self.t.read_until(b"\n" + self.PS1)
 
-    def execute(self, cmd, encoding='utf-8', blocking=None):
+    def execute(self, cmd, encoding='utf-8', blocking=None, env=None):
         if blocking is None: blocking = True
 
-        line = f"{cmd}\n"
+        line = []
+        if env:
+            line.extend(f"{k}={v}" for k, v in sorted(env.items()))
+
+        line.append(cmd)
+        line = " ".join(line)
+
+        self.logger.info(f"# {line}")
 
         if encoding is not None:
             line = line.encode(encoding)
 
-        self.logger.info(f"# {cmd}")
+        line = line + b'\n'
 
         self._value = None
         self.t.write(line)
@@ -252,6 +259,7 @@ class WHClient:
         cmd = []
 
         blocking = kwargs.pop("blocking", True)
+        env = kwargs.pop("env", None)
 
         stdin = kwargs.pop("stdin", None)
         if stdin is not None:
@@ -274,7 +282,7 @@ class WHClient:
                 cmd.append(str(v))
 
         cmd = " ".join(cmd)
-        log = self.sh(cmd, blocking=blocking)
+        log = self.sh(cmd, blocking=blocking, env=env)
 
         #if blocking:
         #    if self.sh.value != 0:
@@ -446,7 +454,7 @@ class Env:
 
         return r
 
-    def setup_public(self, bootstrap_ip='1.1.1.1', workbit=8):
+    def setup_public(self, bootstrap_ip='1.1.1.1', workbit=8, env=None):
         """ Setup a network where first peer is a bootstrap. """
 
         bstp_n = self.nodes[1]
@@ -467,7 +475,7 @@ class Env:
 
         # start bootstrap
         bstp_n.daemon_wh = bstp_n.wh()
-        bstp_n.daemon_wh("up", "public", "private-key", "/sk", "mode", "direct", blocking=False)
+        bstp_n.daemon_wh("up", "public", private_key="/sk", mode="direct", blocking=False, env=env)
 
 @contextlib.contextmanager
 def env(*kargs, **kwargs):
