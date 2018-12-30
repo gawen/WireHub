@@ -92,6 +92,9 @@ def read_micronet_conf(c, micronet_conf):
     ct = c.containers.create("wirehub/micronet", "micronet read /conf")
     write_file(ct, "/conf", micronet_conf.encode('utf-8'))
     ct.start()
+    @retry
+    def f():
+        return ct.status == 'running'
     resp = ct.logs().decode('utf-8')
     ct.kill()
     ct.remove()
