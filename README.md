@@ -324,7 +324,9 @@ node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV
   this part, help is very welcome!
 
 - **Automatic testing**: a lot of work needs to be done to make real automatic
-  testing possible with WireHub. Current efforts are on [`micronet`][micronet].
+  testing possible with WireHub. Current efforts are on branch
+  [`dev-testbed`](https://github.com/Gawen/WireHub/tree/develop-testbed) and
+  [`micronet`][micronet].
 
 - **Poor documentation**: WireHub was a personal project and lacks
   documentation. While this will be progressively solved in the future, in the
@@ -369,7 +371,7 @@ Please refer to the documentation in each files for more info.
 [libpcap]: https://www.tcpdump.org/
 [libsodium]: https://download.libsodium.org/doc/
 [lua]: https://www.lua.org/
-[micronet]: https://github.com/Gawen/WireHub/tree/master/contrib/micronet
+[micronet]: https://github.com/Gawen/WireHub/tree/develop-testbed/contrib/micronet
 [miniupnpc]: http://miniupnp.free.fr/
 [netcat]: https://en.wikipedia.org/wiki/Netcat
 [orchid]: https://datatracker.ietf.org/doc/rfc4843/

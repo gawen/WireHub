@@ -31,12 +31,29 @@ return function(n)
     end
 
     H.inspect = function(send, close)
+        local function set(t)
+            local r = {}
+            for k, v in pairs(t) do
+                assert(v == true)
+                r[#r+1] = k
+            end
+            return r
+        end
+
         local r = {
-            version=wh.version,
-            peers={},
+            auths=set(n.auths),
+            connects=n.connects,
+            frag_counter=n.frag_counter,
+            jitter_rand=n.jitter_rand,
+            key=n.k,
+            mode=n.mode,
+            nat=set(n.nat_detectors),
             opts=opts,
-            key=wh.publickey(n.sk),
+            p=n.p,
+            peers={},
             port=n.port,
+            searches=set(n.searches),
+            version=wh.version,
         }
 
         for bid, bucket in pairs(n.kad.buckets) do
@@ -48,6 +65,10 @@ return function(n)
 
                 r.peers[#r.peers+1] = d
             end
+        end
+
+        if n.bw then
+            r.bw = n.bw:avg()
         end
 
         send(dump_json(r) .. '\n')

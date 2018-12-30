@@ -93,52 +93,70 @@ do
 end
 
 do  -- constants
-    -- Authentication retry before failure.
-    wh.AUTH_RETRY = 4
+    local constants = {
+        -- Authentication retry before failure.
+        AUTH_RETRY = 4,
 
-    -- Seconds. Interval to check connectivity.
-    wh.CONNECTIVITY_CHECK_EVERY = 5*60
+        -- Seconds. Interval to check connectivity.
+        CONNECTIVITY_CHECK_EVERY = 5*60,
 
-    -- Default WireHub (and underlying WireGuard) port
-    wh.DEFAULT_PORT = 62096
+        -- Default WireHub (and underlying WireGuard) port
+        DEFAULT_PORT = 62096,
 
-    -- Count of fragments to temporarily store while WireHub is trying to
-    -- connect to a peer.
-    wh.FRAGMENT_MAX = 4
+        -- Count of fragments to temporarily store while WireHub is trying to
+        -- connect to a peer.
+        FRAGMENT_MAX = 4,
 
-    -- Bytes. WireHub fragment MTU.
-    wh.FRAGMENT_MTU = 1024   -- XXX
+        -- Bytes. WireHub fragment MTU.
+        FRAGMENT_MTU = 1024,   -- XXX
 
-    -- Seconds. Timeout when to discard a fragment packet.
-    wh.FRAGMENT_TIMEOUT = 4
+        -- Seconds. Timeout when to discard a fragment packet.
+        FRAGMENT_TIMEOUT = 4,
 
-    -- Ideal amount of peers to store in one Kademilia bucket (see Kademilia
-    -- paper: http://www.scs.stanford.edu/%7Edm/home/papers/kpos.pdf)
-    wh.KADEMILIA_K = 20
+        -- Ideal amount of peers to store in one Kademilia bucket (see Kademilia
+        -- paper: http://www.scs.stanford.edu/%7Edm/home/papers/kpos.pdf)
+        KADEMILIA_K = 20,
 
-    -- Seconds. Keep-alive timeout. Should be less than NAT timeout.
-    wh.KEEPALIVE_TIMEOUT = 25
+        -- Seconds. Keep-alive timeout. Should be less than NAT timeout.
+        KEEPALIVE_TIMEOUT = 25,
 
-    -- Maximum tentative of UDP hole punching before failure.
-    wh.MAX_PUNCH_RETRY = 10
+        -- Maximum tentative of UDP hole punching before failure.
+        MAX_PUNCH_RETRY = 10,
 
-    -- Seconds. Time to wait between each UDP hole punching tentative
-    wh.MAX_PUNCH_TIMEOUT = .5
+        -- Seconds. Time to wait between each UDP hole punching tentative
+        MAX_PUNCH_TIMEOUT = .5,
 
-    -- Seconds. NAT timeout.
-    wh.NAT_TIMEOUT = 25
+        -- Seconds. NAT timeout.
+        NAT_TIMEOUT = 25,
 
-    -- Seconds. Amount of seconds to wait after each failed ping.
-    wh.PING_BACKOFF = .5
+        -- Seconds. Amount of seconds to wait after each failed ping.
+        PING_BACKOFF = .5,
 
-    -- Maximum tentative of PING before stating peer is offline.
-    wh.PING_RETRY = 4
+        -- Maximum tentative of PING before stating peer is offline.
+        PING_RETRY = 4,
 
-    -- Seconds. Default peer searching timeout before search is stopped.
-    wh.SEARCH_TIMEOUT = 5
+        -- Seconds. Default peer searching timeout before search is stopped.
+        SEARCH_TIMEOUT = 5,
 
-    -- Seconds. Interval to refresh UPnP IGD router with port mapping.
-    wh.UPNP_REFRESH_EVERY = 10*60
+        -- Seconds. Interval to refresh UPnP IGD router with port mapping.
+        UPNP_REFRESH_EVERY = 10*60,
+    }
+
+    local env_prefix = 'WH_'
+    for k, v in pairs(constants) do
+        local env_v = os.getenv(env_prefix .. k)
+
+        if env_v and env_v ~= '' then
+            env_v = tonumber(env_v)
+            if env_v == nil then
+                error(string.format("env var %s is not a number", env_prefix .. k))
+            else
+                v = env_v
+            end
+        end
+
+        wh[k] = v
+    end
 end
 
 -- sanity check (see n.send_datagram())
