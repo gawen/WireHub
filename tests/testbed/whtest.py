@@ -160,7 +160,20 @@ class Shell:
                 log = log.decode(encoding)
 
             if log:
-                self.logger.info(f"> {log}")
+                trunc_log = log
+                truncated = False
+                if '\n' in trunc_log:
+                    trunc_log = trunc_log.split('\n', 1)[0].strip()
+                    truncated=True
+
+                if len(trunc_log) > 128:
+                    trunc_log = trunc_log[:128]
+                    truncated=True
+
+                if truncated:
+                    trunc_log = trunc_log + f" (... truncated {len(log)}B)"
+
+                self.logger.info(f"> {trunc_log}")
 
             return log
 
