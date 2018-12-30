@@ -316,7 +316,7 @@ class Node(Container):
             volumes={},
         )
 
-        if os.environ.get("WH_DEBUG").lower() == "y":
+        if os.environ.get("WH_DEBUG", "n").lower() == "y":
             repo_path = os.path.dirname(__file__)
             repo_path = os.path.normpath(os.path.join(repo_path, "../../src"))
 
