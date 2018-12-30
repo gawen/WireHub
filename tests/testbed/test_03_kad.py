@@ -1,8 +1,8 @@
 from whtest import *
 from collections import defaultdict
 
-KADEMILIA_K = 20
-KADEMILIA_EXTRA_K = KADEMILIA_K * 2
+KADEMILIA_K = 4
+KADEMILIA_EXTRA_K = KADEMILIA_K * 4
 
 lua_generate_large_network_keys = """
 require('wh')
@@ -87,13 +87,17 @@ def test_kad():
     W = wan()
     M(W | peer{up_ip=subnet('1.1.1.1', 0)})
 
-    for i = 1, 2 do
+    for i = 1, 1 do
         M(W | peer{})
     end
     """
 
+    ENVS = {
+        'WH_KADEMILIA_K': KADEMILIA_K,
+    }
+
     with env(unet) as e:
-        e.setup_public(workbit=0)
+        e.setup_public(workbit=0, env=ENVS)
 
         # start as many daemon necessary to have a network where some peers does not know each other
 
@@ -113,6 +117,7 @@ def test_kad():
             peer_id = (i%(e.peer_count-1))+2
             keys_per_n[peer_id].append((i, k))
 
+        keys = {}
         for peer_id, l in keys_per_n.items():
             for i_ks in l:
                 i = i_ks[0]
@@ -121,23 +126,31 @@ def test_kad():
                 with e[peer_id].shell() as sh:
                     sh(f"echo {sk} > /sk.{i}")
 
-        for peer_id, n in e.nodes.items():
-            if peer_id == 1:
-                continue
+                keys[i] = k
 
-            wh = n.daemon_wh = n.wh()
+        peers = [(peer_id, n) for peer_id, n in e.nodes.items() if peer_id > 1]
+
+        for peer_id, n in peers:
+            n.daemon_wh = n.wh()
 
             for i_ks in keys_per_n[peer_id]:
                 i = i_ks[0]
+                k = keys[i]
 
-                wh("up", "public", "private-key", f"/sk.{i}", "listen-port", 0, blocking=False)
+                n.daemon_wh("up", "public", private_key=f"/sk.{i}", listen_port=0, blocking=False, env=ENVS)
 
-        time.sleep(2)
+        for peer_id, n in peers:
+            with n.wh() as wh:
+                for i_ks in keys_per_n[peer_id]:
+                    i = i_ks[0]
+                    k = keys[i]
+
+                    @retry()
+                    def f():
+                        return wh.inspect(k) != None
 
         for peer_id, n in e.nodes.items():
             with n.wh() as wh:
-                print(wh.sh('ls /'))
                 print(wh())
 
-        time.sleep(60)
-
+        assert False
