@@ -265,6 +265,7 @@ class WHClient:
         cmd.extend(map(str, kargs))
 
         for k, v in sorted(kwargs.items()):
+            k = k.replace('_', '-')
             if v is True:
                 cmd.append(k)
 
