@@ -159,7 +159,24 @@ function dump_json(x, level)
             x = wh.tob64(x)
         end
 
-        return string.format('%q', x)
+        local s = {}
+        for i = 1, #x do
+            local c = string.sub(x, i, i)
+            local b = string.byte(c)
+
+            if (
+                (32 <= b and b <= 33) or
+                (35 <= b and b <= 91) or
+                (93 <= b and b <= 126)
+            ) then
+                s[#s+1] = c
+            else
+                s[#s+1] = string.format('\\u%.4x', b)
+            end
+        end
+        s = table.concat(s)
+
+        return string.format('%q', s)
     elseif type(x) == 'userdata' then
         return dump_json(tostring(x))
     else
