@@ -65,30 +65,39 @@ function M._extend(n, s, closest, src)
     table.sort(s.closest, function(a, b) return a[1] < b[1] end)
 end
 
-function M.search(n, k, mode, count, timeout, cb)
+function M.search(n, k, opts, cb)
+    -- opts might be a string being the search mode
+    -- or a table having the following fields:
+    -- * mode: 'ping' (default), 'lookup', 'p2p'
+    -- * timeout: search timeout. By default, wh.SEARCH_TIMEOUT
+    -- * count: search result count. By default, wh.KADEMILIA_K
     assert(k)
 
-    if mode == nil then mode = 'ping' end
-    if mode ~= 'lookup' and
-       mode ~= 'p2p' and
-       mode ~= 'ping' then
+    if type(opts) == 'string' then
+        opts = {mode=opts}
+    end
+
+    if opts.mode == nil then opts.mode = 'ping' end
+    if opts.mode ~= 'lookup' and
+       opts.mode ~= 'p2p' and
+       opts.mode ~= 'ping' then
         error("arg #3 must be 'p2p', 'lookup' or 'ping'")
     end
-    if count == nil then count = wh.KADEMILIA_K end
-    if timeout == nil then timeout = wh.SEARCH_TIMEOUT end
+    if opts.count == nil then opts.count = wh.KADEMILIA_K end
+    if timeout == nil then opts.timeout = wh.SEARCH_TIMEOUT end
 
     local s = setmetatable({
         cb=cb,
         closest={},
-        count=count,
-        deadline=now+timeout,
+        count=opts.count,
+        deadline=now+opts.timeout,
         k=k,
-        mode=mode,
+        may_offline=true,
+        mode=opts.mode,
         running=true,
+        states={},
         uid1=wh.randombytes(8),
         uid2=wh.randombytes(8),
-        may_offline=true,
-        states={},
     }, {
         __index = S
     })
@@ -115,12 +124,16 @@ function M.stop_search(n, s)
     end
 end
 
-function M.connect(n, dst_k, timeout, cb)
+function M.connect(n, dst_k, opts, cb)
     local count = 1
     local p_relay
     local cbed = false
 
-    return n:search(dst_k, 'p2p', count, timeout, function(s, p, via)
+    opts = opts or {}
+    opts.mode = 'p2p'
+    opts.count = 1
+
+    return n:search(dst_k, opts, function(s, p, via)
         if cbed then return end
 
         if p and not p.relay and p.addr then

@@ -44,7 +44,7 @@ function M.authenticate(n, k, alias_sk, cb)
         end
     end
 
-    a.s = n:search(a.k, 'lookup', nil, nil, function(s, p, via)
+    a.s = n:search(a.k, 'lookup', function(s, p, via)
         if not a.s then
             return
         end

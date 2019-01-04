@@ -191,7 +191,7 @@ return function(n)
                 return close()
             end
 
-            s = n:search(k, cmd, nil, nil, function(s, p, via)
+            s = n:search(k, cmd, function(s, p, via)
                 if p then
                     local mode
                     if p.relay then
