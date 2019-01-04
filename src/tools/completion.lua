@@ -135,7 +135,10 @@ if cur_idx == 2 then
     ) then
         local interfaces = wh.ipc_list()
 
-        if subcmd == 'show' and #interfaces > 1 then
+        if (
+            subcmd == 'show' or
+            subcmd == 'inspect'
+           ) and #interfaces > 1 then
             opt('all')
         end
 

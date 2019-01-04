@@ -1,5 +1,5 @@
 function help()
-    print('Usage: wh inspect <interface>')
+    print('Usage: wh inspect {all | <interface>}')
 end
 
 local interface = arg[2]
@@ -9,41 +9,62 @@ end
 
 local ipc=require'ipc'
 
-local ok, value = pcall(ipc.call, interface, 'inspect')
+local function inspect(interface)
+    local ok, value = pcall(ipc.call, interface, 'inspect')
 
-if not ok then
-    printf("%s\nError when connecting to WireHub daemon.", value)
-    return
-end
+    if not ok then
+        printf("%s\nError when connecting to WireHub daemon.", value)
+        return -1
+    end
 
-local sock = value
-if not sock then
-    return -1
-end
+    local sock = value
+    if not sock then
+        return -1
+    end
 
-local ret = -1
-
-now = wh.now()
-while true do
-    local r = wh.select({sock}, {}, {}, now+30)
+    local ret = {}
     now = wh.now()
+    while true do
+        local r = wh.select({sock}, {}, {}, now+30)
+        now = wh.now()
 
-    if not r[sock] then
-        printf("timeout")
-        break
+        if not r[sock] then
+            printf("timeout")
+            break
+        end
+
+        local buf = wh.recv(sock, 65535)
+
+        if not buf or #buf == 0 then
+            break
+        end
+
+        ret[#ret+1] = buf
     end
 
-    local buf = wh.recv(sock, 65535)
+    wh.close(sock)
 
-    if not buf or #buf == 0 then
-        break
-    end
-
-    io.stdout:write(buf)
-    io.stdout:flush()
+    return table.concat(ret)
 end
 
-wh.close(sock)
+if interface == 'all' then
+    print('[')
 
-return ret
+    local interfaces = wh.ipc_list()
+    table.sort(interfaces)
+    for i, k in ipairs(interfaces) do
+        if i > 1 then
+            io.stdout:write(', ')
+        end
+        local v = inspect(k)
+        if v == -1 then return -1 end
+        io.stdout:write(v)
+    end
+
+    print(']')
+else
+    local v = inspect(k)
+    if v == -1 then return -1 end
+    print(v)
+end
 
