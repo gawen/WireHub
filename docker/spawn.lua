@@ -1,5 +1,9 @@
 #!/usr/bin/env lua
 
+-- Spawn X nodes
+--
+-- Usage: spawn.lua 100     # start 100 nodes
+
 if arg[1] == nil then
     print(string.format("usage: %s <count of peers to spawn>", arg[0]))
     print()
