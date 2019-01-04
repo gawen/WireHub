@@ -191,7 +191,16 @@ return function(n)
                 return close()
             end
 
-            s = n:search(k, cmd, function(s, p, via)
+            local opts = {}
+
+            if string.sub(cmd, -4) == '-all' then
+                cmd = string.sub(cmd, 1, -5)
+                opts.return_all = true
+            end
+
+            opts.mode = cmd
+
+            s = n:search(k, opts, function(s, p, via)
                 if p then
                     local mode
                     if p.relay then
@@ -226,6 +235,10 @@ return function(n)
     H['(p2p) ([^%s]+)'] = _search
     H['(lookup) ([^%s]+)'] = _search
     H['(ping) ([^%s]+)'] = _search
+
+    H['(p2p%-all) ([^%s]+)'] = _search
+    H['(lookup%-all) ([^%s]+)'] = _search
+    H['(ping%-all) ([^%s]+)'] = _search
 
     H['connect ([^%s]+)'] = function(send, close, k)
         local s
