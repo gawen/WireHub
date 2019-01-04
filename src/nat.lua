@@ -12,6 +12,49 @@ local function explain(n, d, fmt, ...)
     return n:explain("(nat %s) " .. fmt, n:key(d.k), ...)
 end
 
+function M.detect_nat(n, k, cb)
+    local p
+    if k == nil then
+        -- XXX get the closest node which is public!
+        local closest = n.kad:kclosest(n.k, 1, function(p)
+            return p.bootstrap
+        end)
+        if #closest == 0 then
+            return cb("offline")
+        end
+
+        p = closest[1][2]
+        k = p.k
+    else
+        p = n.kad:get(k)
+
+        if not p then
+            error(string.format("no route to %s", n:key(k)))
+        end
+    end
+
+    local d = {
+        may_cone=true,
+        may_offline=true,
+        may_direct=true,
+        k=k,
+        req_ts=0,
+        retry=0,
+        uid=wh.randombytes(8),
+        uid_echo=wh.randombytes(8),
+        p=p,
+        p_echo=nil,          -- explicit
+    }
+
+    d.cb = function(...)
+        n.nat_detectors[d] = nil
+        return cb(...)
+    end
+
+
+    n.nat_detectors[d] = true
+end
+
 function M.update(n, d, deadlines)
     local to_remove = {}
 
