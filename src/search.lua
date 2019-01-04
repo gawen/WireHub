@@ -25,6 +25,46 @@ local function explain(n, s, fmt, ...)
     return n:explain("(search %s) " .. fmt, n:key(s.k), ...)
 end
 
+function M._extend(n, s, closest, src)
+    s.states[src.k] = {retry=0, rep=true}
+
+    local set = {}
+    for _, c in ipairs(s.closest) do
+        local p = c[2]
+        set[p:pack()] = true
+    end
+
+    for _, c in ipairs(closest) do
+        local dist = c[1]
+        local p = c[2]
+
+        local st = s.states[p.k]
+
+        if (
+            -- if peer has address
+            p.addr and
+
+            -- if peer already answered, skip,
+            (st == nil or not st.rep) and
+
+            -- ignore doublons
+            not set[p:pack()]
+        ) then
+            --printf('extend $(cyan)%s', p)
+            s.closest[#s.closest+1] = {dist, n:add(p)}
+            set[p:pack()] = true
+
+            if s.cb and p.k == s.k then
+                cpcall(s.cb, s, p, src)
+            end
+        end
+    end
+
+    -- XXX maybe give a preference to trusted peers, or peers which are public
+    -- or geographically close
+    table.sort(s.closest, function(a, b) return a[1] < b[1] end)
+end
+
 function M.search(n, k, mode, count, timeout, cb)
     assert(k)
 
