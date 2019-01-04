@@ -63,7 +63,7 @@ if interface == 'all' then
 
     print(']')
 else
-    local v = inspect(k)
+    local v = inspect(interface)
     if v == -1 then return -1 end
     print(v)
 end
