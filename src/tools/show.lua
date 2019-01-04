@@ -1,5 +1,5 @@
 function help()
-    print("Usage: wh show [{<interface> | all} [{light|all}] ] ")
+    print("Usage: wh show {<interface> | all | interfaces } [light | all]")
 end
 
 local ipc = require'ipc'
@@ -8,7 +8,16 @@ local all = {}
 local interface = arg[2]
 
 local mode = 'light'
-if interface then
+if interface == 'interfaces' then
+    local interfaces = wh.ipc_list()
+    table.sort(interfaces)
+    for _, i in ipairs(interfaces) do
+        print(i)
+    end
+
+    return 0
+
+elseif interface then
     mode = arg[3]
     if mode == nil then mode = 'light' end
     local mode_ok = ({

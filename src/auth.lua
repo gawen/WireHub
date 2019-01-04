@@ -13,6 +13,62 @@ local packet = require('packet')
 
 local M = {}
 
+function M.authenticate(n, k, alias_sk, cb)
+    local a = {
+        alias_sk = alias_sk,
+        alias_k = wh.publickey(alias_sk),
+        k = k,
+        retry=0,
+        req_ts=0,
+    }
+
+    a.cb = function(ok, ...)
+        if not n.auths[a] then
+            return
+        end
+
+        n.auths[a] = nil
+
+        if a.alias_sk then
+            wh.burnsk(a.alias_sk)
+            a.alias_sk = nil
+        end
+
+        if a.s then
+            n:stop_search(a.s)
+            a.s = nil
+        end
+
+        if cb then
+            cpcall(cb, ok, ...)
+        end
+    end
+
+    a.s = n:search(a.k, 'lookup', nil, nil, function(s, p, via)
+        if not a.s then
+            return
+        end
+        a.s = nil
+
+        n:stop_search(s)
+
+        if not p then
+            return a:cb(false, "not found")
+        end
+
+        a.p = p
+    end)
+
+    n.auths[a] = true
+
+    return a
+end
+
+function M.stop_authenticate(n, a)
+    a:cb(false, 'interrupted')
+end
+
+
 function M.update(n, a, deadlines)
     -- still searching?
     if not a.p then

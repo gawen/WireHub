@@ -334,178 +334,6 @@ function MT.__index.getent(n, hostname, result_cb)
     return cont_cb()
 end
 
-function MT.__index.search(n, k, mode, count, timeout, cb)
-    assert(k)
-
-    if mode == nil then mode = 'ping' end
-    if mode ~= 'lookup' and
-       mode ~= 'p2p' and
-       mode ~= 'ping' then
-        error("arg #3 must be 'p2p', 'lookup' or 'ping'")
-    end
-    if count == nil then count = wh.KADEMILIA_K end
-    if timeout == nil then timeout = wh.SEARCH_TIMEOUT end
-
-    local s = setmetatable({
-        cb=cb,
-        closest={},
-        count=count,
-        deadline=now+timeout,
-        k=k,
-        mode=mode,
-        running=true,
-        uid1=wh.randombytes(8),
-        uid2=wh.randombytes(8),
-        may_offline=true,
-        states={},
-    }, {
-        __index = S
-    })
-
-    n.searches[s] = true
-
-    -- bootstrap
-    n:_extend(s, n.kad:kclosest(s.k, wh.KADEMILIA_K), n.kad.root)
-
-    return s
-end
-
-function MT.__index.stop_search(n, s)
-    if s.running then
-        s.running = false
-
-        --printf('stop search $(cyan)%s', n:key(s))
-
-        n.searches[s] = nil
-
-        if s.cb then
-            cpcall(s.cb, s, nil)
-        end
-    end
-end
-
-function MT.__index.detect_nat(n, k, cb)
-    local p
-    if k == nil then
-        -- XXX get the closest node which is public!
-        local closest = n.kad:kclosest(n.k, 1, function(p)
-            return p.bootstrap
-        end)
-        if #closest == 0 then
-            return cb("offline")
-        end
-
-        p = closest[1][2]
-        k = p.k
-    else
-        p = n.kad:get(k)
-
-        if not p then
-            error(string.format("no route to %s", n:key(k)))
-        end
-    end
-
-    local d = {
-        may_cone=true,
-        may_offline=true,
-        may_direct=true,
-        k=k,
-        req_ts=0,
-        retry=0,
-        uid=wh.randombytes(8),
-        uid_echo=wh.randombytes(8),
-        p=p,
-        p_echo=nil,          -- explicit
-    }
-
-    d.cb = function(...)
-        n.nat_detectors[d] = nil
-        return cb(...)
-    end
-
-
-    n.nat_detectors[d] = true
-end
-
-function MT.__index.authenticate(n, k, alias_sk, cb)
-    local a = {
-        alias_sk = alias_sk,
-        alias_k = wh.publickey(alias_sk),
-        k = k,
-        retry=0,
-        req_ts=0,
-    }
-
-    a.cb = function(ok, ...)
-        if not n.auths[a] then
-            return
-        end
-
-        n.auths[a] = nil
-
-        if a.alias_sk then
-            wh.burnsk(a.alias_sk)
-            a.alias_sk = nil
-        end
-
-        if a.s then
-            n:stop_search(a.s)
-            a.s = nil
-        end
-
-        if cb then
-            cpcall(cb, ok, ...)
-        end
-    end
-
-    a.s = n:search(a.k, 'lookup', nil, nil, function(s, p, via)
-        if not a.s then
-            return
-        end
-        a.s = nil
-
-        n:stop_search(s)
-
-        if not p then
-            return a:cb(false, "not found")
-        end
-
-        a.p = p
-    end)
-
-    n.auths[a] = true
-
-    return a
-end
-
-function MT.__index.stop_authenticate(n, a)
-    a:cb(false, 'interrupted')
-end
-
-function MT.__index.connect(n, dst_k, timeout, cb)
-    local count = 1
-    local p_relay
-    local cbed = false
-
-    return n:search(dst_k, 'p2p', count, timeout, function(s, p, via)
-        if cbed then return end
-
-        if p and not p.relay and p.addr then
-            cbed = true
-            return cb(s, p, true, p.addr)
-        elseif p and p.relay then
-            p_relay = p
-        elseif n.lo and p_relay then
-            local tunnel = n.lo:touch_tunnel(p_relay)
-            cbed = true
-            return cb(s, p_relay, false, tunnel.lo_addr)
-        else
-            cbed = true
-            return cb(s)
-        end
-    end)
-end
-
 function MT.__index.forget(n, dst_k)
     local p = n.kad:get(dst_k)
     if not p then
@@ -1046,5 +874,12 @@ function M.new(n)
 
     return setmetatable(n, MT)
 end
+
+MT.__index.authenticate = auth.authenticate
+MT.__index.connect = search.connect
+MT.__index.detect_nat = nat.detect_nat
+MT.__index.search = search.search
+MT.__index.stop_authenticate = auth.stop_authenticate
+MT.__index.stop_search = search.stop_search
 
 return M

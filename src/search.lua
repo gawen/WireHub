@@ -25,6 +25,80 @@ local function explain(n, s, fmt, ...)
     return n:explain("(search %s) " .. fmt, n:key(s.k), ...)
 end
 
+function M.search(n, k, mode, count, timeout, cb)
+    assert(k)
+
+    if mode == nil then mode = 'ping' end
+    if mode ~= 'lookup' and
+       mode ~= 'p2p' and
+       mode ~= 'ping' then
+        error("arg #3 must be 'p2p', 'lookup' or 'ping'")
+    end
+    if count == nil then count = wh.KADEMILIA_K end
+    if timeout == nil then timeout = wh.SEARCH_TIMEOUT end
+
+    local s = setmetatable({
+        cb=cb,
+        closest={},
+        count=count,
+        deadline=now+timeout,
+        k=k,
+        mode=mode,
+        running=true,
+        uid1=wh.randombytes(8),
+        uid2=wh.randombytes(8),
+        may_offline=true,
+        states={},
+    }, {
+        __index = S
+    })
+
+    n.searches[s] = true
+
+    -- bootstrap
+    n:_extend(s, n.kad:kclosest(s.k, wh.KADEMILIA_K), n.kad.root)
+
+    return s
+end
+
+function M.stop_search(n, s)
+    if s.running then
+        s.running = false
+
+        --printf('stop search $(cyan)%s', n:key(s))
+
+        n.searches[s] = nil
+
+        if s.cb then
+            cpcall(s.cb, s, nil)
+        end
+    end
+end
+
+function M.connect(n, dst_k, timeout, cb)
+    local count = 1
+    local p_relay
+    local cbed = false
+
+    return n:search(dst_k, 'p2p', count, timeout, function(s, p, via)
+        if cbed then return end
+
+        if p and not p.relay and p.addr then
+            cbed = true
+            return cb(s, p, true, p.addr)
+        elseif p and p.relay then
+            p_relay = p
+        elseif n.lo and p_relay then
+            local tunnel = n.lo:touch_tunnel(p_relay)
+            cbed = true
+            return cb(s, p_relay, false, tunnel.lo_addr)
+        else
+            cbed = true
+            return cb(s)
+        end
+    end)
+end
+
 function M.update(n, s, deadlines)
     local to_remove = {}
 
