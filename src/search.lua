@@ -54,7 +54,7 @@ function M._extend(n, s, closest, src)
             s.closest[#s.closest+1] = {dist, n:add(p)}
             set[p:pack()] = true
 
-            if s.cb and p.k == s.k then
+            if s.cb and (s.return_all or p.k == s.k) then
                 cpcall(s.cb, s, p, src)
             end
         end
@@ -71,6 +71,8 @@ function M.search(n, k, opts, cb)
     -- * mode: 'ping' (default), 'lookup', 'p2p'
     -- * timeout: search timeout. By default, wh.SEARCH_TIMEOUT
     -- * count: search result count. By default, wh.KADEMILIA_K
+    -- * return_all: if true, returns all intermediary peers pointing to the
+    --               destination. by default, nil.
     assert(k)
 
     if type(opts) == 'string' then
@@ -94,6 +96,7 @@ function M.search(n, k, opts, cb)
         k=k,
         may_offline=true,
         mode=opts.mode,
+        return_all=opts.return_all,
         running=true,
         states={},
         uid1=wh.randombytes(8),
