@@ -109,7 +109,7 @@ H[packet.cmds.result] = function(n, m, src)
         i = i + 1
 
         do
-            p.k = string.sub(m, i, i+31);
+            p.k = string.sub(m, i, i+31)
             i = i + 32
 
             p.addr, l = wh.unpack_address(string.sub(m, i))
@@ -120,7 +120,7 @@ H[packet.cmds.result] = function(n, m, src)
             local relay = {}
             relay.k = string.sub(m, i, i+31)
             i = i + 32
-            relay.addr = wh.unpack_address(string.sub(m, i))
+            relay.addr, l = wh.unpack_address(string.sub(m, i))
             i = i + l
 
             -- prefer own source
