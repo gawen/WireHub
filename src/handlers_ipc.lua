@@ -196,6 +196,14 @@ return function(n)
             if string.sub(cmd, -4) == '-all' then
                 cmd = string.sub(cmd, 1, -5)
                 opts.return_all = true
+
+            elseif string.sub(cmd, -6) == '-debug' then
+                cmd = string.sub(cmd, 1, -7)
+                opts.probe_cb = function(s, v)
+                    local action = v.action
+                    v.action = nil
+                    send('(debug) %s: %s\n', action, dump_json(v))
+                end
             end
 
             opts.mode = cmd
@@ -232,13 +240,11 @@ return function(n)
         end
     end
 
-    H['(p2p) ([^%s]+)'] = _search
-    H['(lookup) ([^%s]+)'] = _search
-    H['(ping) ([^%s]+)'] = _search
-
-    H['(p2p%-all) ([^%s]+)'] = _search
-    H['(lookup%-all) ([^%s]+)'] = _search
-    H['(ping%-all) ([^%s]+)'] = _search
+    for _, c in ipairs{'p2p', 'lookup', 'ping'} do
+        for _, pref in ipairs{'', '%-all', '%-debug'} do
+            H['(' .. c .. pref .. ') ([^%s]+)'] = _search
+        end
+    end
 
     H['connect ([^%s]+)'] = function(send, close, k)
         local s

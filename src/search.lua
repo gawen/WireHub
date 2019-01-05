@@ -22,6 +22,10 @@ local packet = require('packet')
 local M = {}
 
 local function explain(n, s, fmt, ...)
+    if s.probe_cb then s:probe_cb{
+        action='explain',
+        what=string.format(fmt, ...),
+    } end
     return n:explain("(search %s) " .. fmt, n:key(s.k), ...)
 end
 
@@ -57,12 +61,24 @@ function M._extend(n, s, closest, src)
             if s.cb and (s.return_all or p.k == s.k) then
                 cpcall(s.cb, s, p, src)
             end
+
+            if s.probe_cb then s:probe_cb{
+                action="extend",
+                p=p,
+                st=st,
+            } end
         end
     end
 
     -- XXX maybe give a preference to trusted peers, or peers which are public
     -- or geographically close
     table.sort(s.closest, function(a, b) return a[1] < b[1] end)
+
+    if s.probe_cb then s:probe_cb{
+        action="closest",
+        closest=s.closest,
+        states=s.states,
+    } end
 end
 
 function M.search(n, k, opts, cb)
@@ -73,6 +89,8 @@ function M.search(n, k, opts, cb)
     -- * count: search result count. By default, wh.KADEMILIA_K
     -- * return_all: if true, returns all intermediary peers pointing to the
     --               destination. by default, nil.
+    -- * probe_cb: function called to follow search steps. For debug purposes.
+    --             by default, nil.
     assert(k)
 
     if type(opts) == 'string' then
@@ -96,6 +114,7 @@ function M.search(n, k, opts, cb)
         k=k,
         may_offline=true,
         mode=opts.mode,
+        probe_cb=opts.probe_cb,
         return_all=opts.return_all,
         running=true,
         states={},
@@ -106,6 +125,12 @@ function M.search(n, k, opts, cb)
     })
 
     n.searches[s] = true
+
+    if s.probe_cb then s:probe_cb{
+        action="start",
+        k=s.k,
+        mode=s.mode,
+    } end
 
     -- bootstrap
     n:_extend(s, n.kad:kclosest(s.k, wh.KADEMILIA_K), n.kad.root)
@@ -118,6 +143,10 @@ function M.stop_search(n, s)
         s.running = false
 
         --printf('stop search $(cyan)%s', n:key(s))
+
+        if s.probe_cb then s:probe_cb{
+            action='stop',
+        } end
 
         n.searches[s] = nil
 
@@ -258,6 +287,12 @@ function M.update(n, s, deadlines)
             end
         end
 
+        if s.probe_cb then s:probe_cb{
+            action='update',
+            p=p,
+            st=st,
+        } end
+
         -- save state
         s.states[p.k] = st
         if deadline ~= nil then
@@ -271,6 +306,11 @@ function M.update(n, s, deadlines)
     for i = #to_remove, 1, -1 do
         table.remove(s.closest, to_remove[i])
     end
+
+    if s.probe_cb then s:probe_cb{
+        action="closest",
+        closest=s.closest,
+    } end
 
     if #s.closest == 0 then
         n:stop_search(s)
