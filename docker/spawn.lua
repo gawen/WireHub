@@ -4,6 +4,10 @@
 --
 -- Usage: spawn.lua 100     # start 100 nodes
 
+require('wh')
+
+io.popen('mkdir -p /tmp/spawn')
+
 if arg[1] == nil then
     print(string.format("usage: %s <count of peers to spawn>", arg[0]))
     print()
@@ -16,6 +20,9 @@ end
 local n = tonumber(arg[1])
 
 for i = 1, n do
-    print("spawn", i)
-    os.execute("wh up public listen-port 0")
+    local b64k = io.popen(string.format("wh genkey public | tee /tmp/spawn/%s.sk | wh pubkey", i)):read()
+    local k = wh.fromb64(b64k)
+
+    print("spawn", i, b64k)
+    os.execute(string.format("WH_LOGPATH=/tmp/spawn/%s.log wh up public private-key /tmp/spawn/%s.sk listen-port 0", b64k, i))
 end
