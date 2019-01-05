@@ -212,7 +212,7 @@ return function(n)
                     end
 
                     send('%s %s %s %s\n',
-                        wh.tob64(k),
+                        wh.tob64(p.k),
                         mode,
                         p.addr,
                         wh.tob64(via.k)
