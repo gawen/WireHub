@@ -103,7 +103,7 @@ function M.search(n, k, opts, cb)
        opts.mode ~= 'ping' then
         error("arg #3 must be 'p2p', 'lookup' or 'ping'")
     end
-    if opts.count == nil then opts.count = wh.KADEMILIA_K end
+    if opts.count == nil then opts.count = wh.SEARCH_COUNT end
     if timeout == nil then opts.timeout = wh.SEARCH_TIMEOUT end
 
     local s = setmetatable({
