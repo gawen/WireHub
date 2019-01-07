@@ -128,7 +128,8 @@ function M.search(n, k, opts, cb)
 
     if s.probe_cb then s:probe_cb{
         action="start",
-        k=s.k,
+        from=n.p,
+        to=s.k,
         mode=s.mode,
     } end
 
@@ -284,14 +285,14 @@ function M.update(n, s, deadlines)
                 st.req_ts = now
                 st.rep = false
                 deadline = st.req_ts+st.retry+1
+
+                if s.probe_cb then s:probe_cb{
+                    action='request',
+                    p=p,
+                    st=st,
+                } end
             end
         end
-
-        if s.probe_cb then s:probe_cb{
-            action='update',
-            p=p,
-            st=st,
-        } end
 
         -- save state
         s.states[p.k] = st
@@ -310,6 +311,7 @@ function M.update(n, s, deadlines)
     if s.probe_cb then s:probe_cb{
         action="closest",
         closest=s.closest,
+        states=states,
     } end
 
     if #s.closest == 0 then
@@ -361,6 +363,12 @@ function M.on_result(n, pks, closest, src)
             for i, p in ipairs(closest) do
                 s_closest[i] = {wh.xor(s.k, p.k), p}
             end
+
+            if s.probe_cb then s:probe_cb{
+                action='response',
+                src=src,
+                closest=s_closest,
+            } end
 
             n:_extend(s, s_closest, src)
         end
