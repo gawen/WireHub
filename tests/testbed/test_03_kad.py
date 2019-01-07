@@ -2,7 +2,7 @@ from whtest import *
 from collections import defaultdict
 
 KADEMILIA_K = 4
-KADEMILIA_EXTRA_K = KADEMILIA_K * 4
+KADEMILIA_EXTRA_K = KADEMILIA_K * 20
 
 lua_generate_large_network_keys = """
 require('wh')
@@ -87,9 +87,7 @@ def test_kad():
     W = wan()
     M(W | peer{up_ip=subnet('1.1.1.1', 0)})
 
-    for i = 1, 1 do
-        M(W | peer{})
-    end
+    for i = 1, 1 do M(W | peer{}) end
     """
 
     ENVS = {
@@ -149,8 +147,18 @@ def test_kad():
                     def f():
                         return wh.inspect(k) != None
 
+        time.sleep(30)
+
+        r = {}
+
+        from pprint import pprint
         for peer_id, n in e.nodes.items():
             with n.wh() as wh:
-                print(wh())
+                for i, k in enumerate(wh.interfaces()):
+                    r[i] = wh.inspect(k)
+
+        import json
+        with open('log.json', 'w') as fh:
+            json.dump(r, fh)
 
         assert False

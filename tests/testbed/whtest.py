@@ -322,6 +322,9 @@ class WHClient:
             print(buf)
             raise
 
+    def interfaces(self):
+        return self("show", "interfaces").split()
+
 class Node(Container):
     def __init__(self, c, net, name, logger):
         super().__init__(logger)
