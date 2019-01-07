@@ -135,6 +135,9 @@ do  -- constants
         -- Maximum tentative of PING before stating peer is offline.
         PING_RETRY = 4,
 
+        -- Maximum count of peers to keep while searching for a node.
+        SEARCH_COUNT = 20,
+
         -- Seconds. Default peer searching timeout before search is stopped.
         SEARCH_TIMEOUT = 5,
 
