@@ -21,8 +21,9 @@ local n = tonumber(arg[1])
 
 for i = 1, n do
     local b64k = io.popen(string.format("wh genkey public | tee /tmp/spawn/%s.sk | wh pubkey", i)):read()
+    print(b64k)
     local k = wh.fromb64(b64k)
 
     print("spawn", i, b64k)
-    os.execute(string.format("WH_LOGPATH=/tmp/spawn/%s.log wh up public private-key /tmp/spawn/%s.sk listen-port 0", b64k, i))
+    os.execute(string.format("WH_LOGPATH=/tmp/spawn/%s.log wh up public private-key /tmp/spawn/%s.sk listen-port 0 &", b64k, i))
 end
