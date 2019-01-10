@@ -46,7 +46,10 @@ function M.detect_nat(n, k, cb)
         p_echo=nil,          -- explicit
     }
 
+    d.p:acquire(d)
+
     d.cb = function(...)
+        d.p:release(d)
         n.nat_detectors[d] = nil
         return cb(...)
     end
