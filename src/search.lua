@@ -55,7 +55,8 @@ function M._extend(n, s, closest, src)
             not set[p:pack()]
         ) then
             --printf('extend $(cyan)%s', p)
-            s.closest[#s.closest+1] = {dist, n:add(p)}
+            p = n:add(p):acquire(s)
+            s.closest[#s.closest+1] = {dist, p}
             set[p:pack()] = true
 
             if s.cb and (s.return_all or p.k == s.k) then
@@ -154,6 +155,12 @@ function M.stop_search(n, s)
         if s.cb then
             cpcall(s.cb, s, nil)
         end
+
+        for i, c in ipairs(s.closest) do
+            local p = c[2]
+            p:release(s)
+        end
+        s.closest = {}
     end
 end
 
@@ -300,6 +307,7 @@ function M.update(n, s, deadlines)
             deadlines[#deadlines+1] = deadline
 
         else
+            p:release(s)
             to_remove[#to_remove+1] = i
         end
     end
