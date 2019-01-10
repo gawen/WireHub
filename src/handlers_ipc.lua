@@ -332,6 +332,11 @@ return function(n)
         return close()
     end
 
+    H.now = function(send, close)
+        send(string.format("%s\n", now))
+        return close()
+    end
+
     return H
 end
 
