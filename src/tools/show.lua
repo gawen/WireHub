@@ -37,7 +37,7 @@ local function call(interface, cmd)
     local ok, value = pcall(ipc.call, interface, cmd)
 
     if not ok then
-        printf("%s\nError when connecting to WireHub daemon.", value)
+        printf("Error when connecting to WireHub daemon: %s\n", value)
         return
     end
 
