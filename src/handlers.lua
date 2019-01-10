@@ -89,7 +89,9 @@ H[packet.cmds.search] = function(n, m, src)
     local k = string.sub(m, 2)
     log_cmd(n, m, src, "$(yellow)search$(reset)(%s)", n:key(k))
 
-    local closest = n.kad:kclosest(k, wh.KADEMILIA_K)
+    local closest = n.kad:kclosest(k, wh.KADEMILIA_K, function(p)
+        return p.k == k or p:state() == 'direct'
+    end)
 
     n:_sendto{dst=src, m=packet.result(k, closest)}
 end

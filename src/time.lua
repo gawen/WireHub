@@ -44,20 +44,28 @@ function M.retry_backoff(obj, retry_field, last_field, retry_max, backoff)
 end
 
 local function retry_ping_backoff_deadline(p, retry_every, backoff)
-    local v = max{
-        (p.last_seen or 0) + retry_every,
-        (p.last_ping or 0) + (p.ping_retry or 0) * backoff,
-    }
+    local deadline
 
-    assert(v ~= nil)
-    return v
+    if p.last_seen then
+        deadline = p.last_seen + retry_every
+    else
+        if p.first_ping_ts == nil then
+            p.first_ping_ts = now
+        end
+
+        deadline = p.first_ping_ts
+    end
+
+    deadline = deadline + (p.ping_retry or 0) * backoff
+
+    return deadline
 end
 
 function M.retry_ping_backoff(p, retry_every, retry_max, backoff)
     local deadline
     deadline = retry_ping_backoff_deadline(p, retry_every, backoff)
 
-    if now <= deadline then
+    if now < deadline then
         return false, deadline
     end
 
@@ -67,6 +75,7 @@ function M.retry_ping_backoff(p, retry_every, retry_max, backoff)
     end
 
     -- action has to be performed; calculate next deadline
+    if p.last_ping == nil and p.first_tx_ts == nil then p.first_tx_ts = now end
     p.last_ping = now
     p.ping_retry = (p.ping_retry or 0) + 1
     deadline = retry_ping_backoff_deadline(p, retry_every, backoff)

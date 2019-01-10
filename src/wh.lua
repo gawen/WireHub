@@ -94,6 +94,11 @@ end
 
 do  -- constants
     local constants = {
+        -- Seconds. Minimum interval between checking if peers are alive. If one
+        -- peer appears to be alive, it will not be checked during this amount
+        -- of seconds)
+        ALIVE_INTERVAL = 1 * 60,
+
         -- Authentication retry before failure.
         AUTH_RETRY = 4,
 
@@ -117,8 +122,11 @@ do  -- constants
         -- paper: http://www.scs.stanford.edu/%7Edm/home/papers/kpos.pdf)
         KADEMILIA_K = 20,
 
-        -- Seconds. Keep-alive timeout. Should be less than NAT timeout.
-        KEEPALIVE_TIMEOUT = 25,
+        -- Seconds. Keep-alive for direct peers timeout.
+        KEEPALIVE_DIRECT_TIMEOUT = 5 * 60,
+
+        -- Seconds. Keep-alive timeout for NAT-ed peers. Should be less than NAT timeout.
+        KEEPALIVE_NAT_TIMEOUT = 25,
 
         -- Maximum tentative of UDP hole punching before failure.
         MAX_PUNCH_RETRY = 10,

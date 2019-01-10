@@ -135,7 +135,11 @@ function M.search(n, k, opts, cb)
     } end
 
     -- bootstrap
-    n:_extend(s, n.kad:kclosest(s.k, wh.KADEMILIA_K), n.kad.root)
+    local closest = n.kad:kclosest(k, wh.KADEMILIA_K, function(p)
+        return p.k == k or p:state() == 'direct'
+    end)
+
+    n:_extend(s, closest, n.kad.root)
 
     return s
 end
@@ -367,18 +371,25 @@ end
 function M.on_result(n, pks, closest, src)
     for s in pairs(n.searches) do
         if pks == s.k then
-            local s_closest = {}
-            for i, p in ipairs(closest) do
-                s_closest[i] = {wh.xor(s.k, p.k), p}
+            local st = s.states[src.k]
+            if st then
+                st.rep = true
+
+                local s_closest = {}
+                for i, p in ipairs(closest) do
+                    s_closest[i] = {wh.xor(s.k, p.k), p}
+                end
+
+                if s.probe_cb then s:probe_cb{
+                    action='response',
+                    src=src,
+                    closest=s_closest,
+                } end
+
+                n:_extend(s, s_closest, src)
+            else
+                -- XXX RESULT sent without SEARCH. Might be bug, stopped search race, malicious, ...
             end
-
-            if s.probe_cb then s:probe_cb{
-                action='response',
-                src=src,
-                closest=s_closest,
-            } end
-
-            n:_extend(s, s_closest, src)
         end
     end
 end

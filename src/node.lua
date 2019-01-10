@@ -43,13 +43,13 @@ function MT.__index._sendto(n, opts)
     local udp_dst_addr
     if opts.to_echo then
         if not udp_dst.addr_echo then
-            errorf("unknown echo address for %s", udp_dst)
+            errorf("unknown echo address for %s: %s", udp_dst, dump(udp_dst))
         end
 
         udp_dst_addr = udp_dst.addr_echo
     else
         if not udp_dst.addr then
-            errorf("unknown address for %s", udp_dst)
+            errorf("unknown address for %s: %s", udp_dst, dump(udp_dst))
         end
         udp_dst_addr = udp_dst.addr
     end
@@ -114,19 +114,19 @@ function MT.__index.update(n, socks)
         n.ns.worker:update(socks)
     end
 
+    kad.update(n, deadlines)
+
     for d in pairs(n.nat_detectors) do
         nat.update(n, d, deadlines)
-    end
-
-    for s in pairs(n.searches) do
-        search.update(n, s, deadlines)
     end
 
     for a in pairs(n.auths) do
         auth.update(n, a, deadlines)
     end
 
-    kad.update(n, deadlines)
+    for s in pairs(n.searches) do
+        search.update(n, s, deadlines)
+    end
 
     if n.lo then
         deadlines[#deadlines+1] = n.lo:update(socks)
