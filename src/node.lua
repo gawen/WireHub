@@ -643,19 +643,19 @@ function MT.__index.describe(n, mode)
 
             r[#r+1] = "  "
 
-            local active = p.last_seen and now-p.last_seen <= wh.KEEPALIVE_TIMEOUT and not p.alias
+            local state, active = p:state()
 
             if active then
                 r[#r+1] = "$(green)"
             end
 
-            if p.alias then
+            if state == 'alias' then
                 r[#r+1] = '◌ '
-            elseif p.relay then
+            elseif state == 'relay' then
                 r[#r+1] = '○ '
-            elseif p.is_nated and p.addr then
+            elseif state == 'nat' then
                 r[#r+1] = '◒ '
-            elseif p.addr then
+            elseif state == 'direct' then
                 r[#r+1] = '● '
             else
                 r[#r+1] = '  '
