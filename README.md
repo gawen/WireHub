@@ -337,7 +337,8 @@ node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV
   yet between several relays, which makes a single point of failure of WireHub
   relay mechanisms;
 
-- **Only IPv4**: implemeting IPv6 requires some additional work;
+- **Only IPv4 private addresses**: implemeting IPv6 private addresses requires
+  some additional work;
 
 - **Only tested on x86_64**: testing on ARM architectures were unsucessful. x86
   has not been tested yet.
