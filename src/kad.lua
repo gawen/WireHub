@@ -210,8 +210,8 @@ function M.update(n, deadlines)
 
                     if not p:owned() then
                         to_remove[#to_remove+1] = i
-                    else
-                        dbg("notice: do not remove peer %s", wh.key(p.k))
+                    --else
+                    --    dbg("notice: do not remove peer %s", wh.key(p.k))
                     end
 
                     if sess.p_state == 'direct' then
