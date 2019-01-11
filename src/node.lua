@@ -519,7 +519,7 @@ function MT.__index.describe(n, mode)
     local r = {}
 
     if n.name then
-        r[#r+1] = string.format("network $(bold)%s$(reset), ", n.name)
+        r[#r+1] = string.format("network $(bold)%s$(reset) ", n.name)
     end
 
     r[#r+1] = "node "

@@ -89,7 +89,7 @@ for _, name in ipairs(names) do
     local info = call(name, cmd)
 
     if info then
-        printf("interface $(bold)%s$(reset), %s", name, info)
+        printf("interface $(bold)%s$(reset) %s", name, info)
     end
 end
 
