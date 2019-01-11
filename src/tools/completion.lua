@@ -124,12 +124,12 @@ local subcmd = cmd[2]
 if cur_idx == 2 then
     if (
         subcmd == 'authenticate' or
-        subcmd == 'connect' or
         subcmd == 'down' or
         subcmd == 'forget' or
         subcmd == 'inspect' or
         subcmd == 'ipc' or
         subcmd == 'lookup' or
+        subcmd == 'p2p' or
         subcmd == 'ping' or
         subcmd == 'show'
     ) then
@@ -163,9 +163,9 @@ end
 
 if cur_idx == 3 then
     if (
-        subcmd == 'connect' or
         subcmd == 'forget' or
         subcmd == 'lookup' or
+        subcmd == 'p2p' or
         subcmd == 'ping'
     ) then
         local trusted, untrusted = listpeers(cmd[3])

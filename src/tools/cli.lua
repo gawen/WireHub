@@ -20,8 +20,7 @@ function help()
         "\n" ..
         "Available network subcommands\n" ..
         "  auth: Authenticate with an alias' private key\n" ..
-        "  connect: Connect to a WireHub peer\n" ..
-        "  connect-p2p: Connect to a WireHub peer\n" ..
+        "  p2p: Establish a peer-to-peer communication with a WireHub peer\n" ..
         "  forget: Forget one WireHub peer\n" ..
         "  lookup Lookup for a WireHub peer\n" ..
         "  ping: Ping a WireHub peer\n" ..
@@ -83,7 +82,6 @@ SUBCMDS = {
     "check-wg",
     "clearconf",
     "completion",
-    "connect",
     "down",
     "forget",
     "genkey",
@@ -92,6 +90,7 @@ SUBCMDS = {
     "ipc",
     "lookup",
     "orchid",
+    "p2p",
     "ping",
     "pubkey",
     "resolve",
@@ -116,7 +115,7 @@ if not SUBCMDS[cmd] then
     cmd = 'help'
 end
 
-if cmd == 'connect-p2p' or cmd == 'ping' or cmd == 'lookup' then
+if cmd == 'p2p' or cmd == 'ping' or cmd == 'lookup' then
     cmd = 'search'
 end
 

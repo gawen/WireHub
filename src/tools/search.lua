@@ -17,8 +17,6 @@ end
 
 local time_before_ping = wh.now()
 
-if cmd == 'connect-p2p' then cmd = 'p2p' end
-
 local ipc_cmd = string.format('%s %s', cmd, k)
 local ok, value = pcall(require('ipc').call, interface, ipc_cmd)
 if not ok then
