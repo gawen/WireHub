@@ -54,8 +54,18 @@ local function _work_upnp(n)
             end
 
             if k and #k == 32 and n.k ~= k then
-                -- check version if necessary
-                u.peers[k] = {r.iaddr, r.iport}
+                -- XXX check version if necessary
+
+                -- XXX for now, add the peer only if we know its public
+                -- interface. When WireHub will be ready to handle private and
+                -- public peer addresses, r.iaddr and r.iport could be used
+
+
+                if u.external_ip then
+                    u.peers[k] = {u.external_ip, r.iport}
+                else
+                    --u.peers[k] = {r.iaddr, r.iport}
+                end
             end
         end
     end
