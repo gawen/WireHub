@@ -29,22 +29,35 @@ local function _work_upnp(n)
                 protocol='udp',
             })
 
-            if ok then
-                printf('upsert UPnP redirection %s:%d -> %s:%d',
-                    u.external_ip or '???', n.port, u.iaddr, n.port
-                )
-            else
-                printf('UPnP error: %s. ignore', err)
-            end
+            --if ok then
+            --    printf('upsert UPnP redirection %s:%d -> %s:%d',
+            --        u.external_ip or '???', n.port, u.iaddr, n.port
+            --    )
+            --else
+            --    printf('UPnP error: %s. ignore', err)
+            --end
 
             return ok
         end
 
-        if _add(n.port) and _add(n.port_echo) then
-            u.enabled = true
-        end
+        -- do not check UPnP error, experience shows this is often buggy.
+        _add(n.port)
+        _add(n.port_echo)
+
+        local port_ok, port_echo_ok
 
         for _, r in ipairs(wh.upnp.list_redirects(d)) do
+            -- check redirections was a success.
+            if r.iaddr == u.iaddr then
+                if r.iport == n.port and r.eport == n.port then
+                    port_ok = true
+                end
+
+                if r.iport == n.port_echo and r.eport == n.port_echo then
+                    port_echo_ok = true
+                end
+            end
+
             local k = string.match(r.desc, "WireHub ([^ ]+)")
 
             if k then
@@ -67,6 +80,14 @@ local function _work_upnp(n)
                     --u.peers[k] = {r.iaddr, r.iport}
                 end
             end
+        end
+
+        u.enabled = port_ok and port_echo_ok
+
+        if u.enabled then
+            printf("UPnP redirection is $(green)enabled")
+        else
+            printf("UPnP redirection is $(green)not installed")
         end
     end
 
