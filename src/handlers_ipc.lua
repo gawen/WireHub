@@ -185,51 +185,55 @@ return function(n)
     local function _search(send, close, cmd, k)
         local s
 
+        local opts = {}
+
+        if string.sub(cmd, -4) == '-all' then
+            cmd = string.sub(cmd, 1, -5)
+            opts.return_all = true
+
+        elseif string.sub(cmd, -6) == '-debug' then
+            cmd = string.sub(cmd, 1, -7)
+            opts.probe_cb = function(s, v)
+                local action = v.action
+                v.action = nil
+                send('(debug) %s: %s\n', action, dump_json(v))
+            end
+        end
+
+        opts.mode = cmd
+
+        local prefix = opts.return_all
+
         n:getent(k, function(k)
-            if not k then
-                send('invalid key\n')
-                return close()
-            end
-
-            local opts = {}
-
-            if string.sub(cmd, -4) == '-all' then
-                cmd = string.sub(cmd, 1, -5)
-                opts.return_all = true
-
-            elseif string.sub(cmd, -6) == '-debug' then
-                cmd = string.sub(cmd, 1, -7)
-                opts.probe_cb = function(s, v)
-                    local action = v.action
-                    v.action = nil
-                    send('(debug) %s: %s\n', action, dump_json(v))
+                if not k then
+                    send('invalid key\n')
+                    return close()
                 end
-            end
 
-            opts.mode = cmd
+                s = n:search(k, opts, function(s, p, via)
+                    if p then
+                        local mode
+                        if p.relay then
+                            mode = wh.tob64(p.relay.k)
+                        elseif p.is_nated then
+                            mode = '(nat)'
+                        else
+                            mode = '(direct)'
+                        end
 
-            s = n:search(k, opts, function(s, p, via)
-                if p then
-                    local mode
-                    if p.relay then
-                        mode = wh.tob64(p.relay.k)
-                    elseif p.is_nated then
-                        mode = '(nat)'
+                        send('%s %s %s %s\n',
+                            wh.tob64(p.k),
+                            mode,
+                            p.addr,
+                            wh.tob64(via.k)
+                        )
                     else
-                        mode = '(direct)'
+                        close()
                     end
-
-                    send('%s %s %s %s\n',
-                        wh.tob64(p.k),
-                        mode,
-                        p.addr,
-                        wh.tob64(via.k)
-                    )
-                else
-                    close()
-                end
-            end)
-        end)
+                end)
+            end,
+            prefix
+        )
 
         return function()
             if s then
