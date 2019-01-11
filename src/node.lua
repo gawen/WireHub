@@ -182,118 +182,6 @@ function MT.__index.add(n, other)
     return self, changed
 end
 
-function MT.__index.getent(n, hostname, result_cb)
-    if hostname == nil then
-        return nil
-    end
-
-    local cbs = {}
-
-    if n.ns then
-        for _, ns in ipairs(n.ns) do
-            cbs[#cbs+1] = ns
-        end
-    end
-
-    -- might be a shorther version of Base64 WireHub Base64
-    cbs[#cbs+1] = function(n, k, cb)
-        local test = function(p)
-            local e = string.find(wh.tob64(p.k), k)
-            return e
-        end
-
-        local match
-
-        if test(n.kad.root) then
-            match = n.kad.root
-        end
-
-        for _, bucket in ipairs(n.kad.buckets) do
-            for _, p in ipairs(bucket) do
-                if test(p) then
-                    if match then
-                        -- there's an possible ambiguity. fails
-                        return cb(nil)
-                    else
-                        match = p
-                    end
-                end
-            end
-        end
-
-        if match then
-            return cb(match.k)
-        else
-            return cb(nil)
-        end
-    end
-
-    -- might be Base64 from WireHub
-    cbs[#cbs+1] = function(n, k, cb)
-        local ok, k = pcall(wh.fromb64, k, 'wh')
-
-        if ok then
-            if #k ~= 32 then k = nil end
-        else
-            k = nil
-        end
-
-        return cb(k)
-    end
-
-    -- might be Base64 from WireGuard
-    cbs[#cbs+1] = function(n, k, cb)
-        local k = pcall(wh.fromb64, k, 'wg')
-        if k then
-            if #k ~= 32 then k = nil end
-        else
-            k = nil
-        end
-        return cb(k)
-    end
-
-    -- might be a hostname
-    cbs[#cbs+1] = function(n, h, cb)
-        -- XXX manages index for hostnames
-
-        if n.kad.root.hostname == h then
-            return cb(n.kad.root.k)
-        end
-
-        for _, bucket in ipairs(n.kad.buckets) do
-            for _, p in ipairs(bucket) do
-                if p.hostname == h and p.k then
-                    return cb(p.k)
-                end
-            end
-        end
-
-        return cb()
-    end
-
-    local key = nil
-    local cont_cb
-
-    function cont_cb()
-        local cb
-        key, cb = next(cbs, key)
-
-        if key and cb then
-            return cb(n, hostname, function(k)
-                if k then
-                    return result_cb(k)
-                else
-                    return cont_cb()
-                end
-            end)
-        else
-            return result_cb(nil)
-        end
-    end
-
-    return cont_cb()
-end
-
 function MT.__index.forget(n, dst_k)
     local p = n.kad:get(dst_k)
     if not p then
@@ -839,6 +727,7 @@ MT.__index._extend = search._extend
 MT.__index.authenticate = auth.authenticate
 MT.__index.connect = search.connect
 MT.__index.detect_nat = nat.detect_nat
+MT.__index.getent = require('getent')
 MT.__index.search = search.search
 MT.__index.stop_authenticate = auth.stop_authenticate
 MT.__index.stop_search = search.stop_search
