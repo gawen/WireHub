@@ -132,6 +132,10 @@ function MT.__index.update(n, socks)
         deadlines[#deadlines+1] = n.lo:update(socks)
     end
 
+    if n.wgsync then
+        deadlines[#deadlines+1] = n.wgsync:update(socks)
+    end
+
     if (n.bw and
         n.bw:length() ~= 0 and
         time.every(deadlines, n.bw, 'last_collect_ts', n.bw.scale)) then
@@ -376,6 +380,10 @@ function MT.__index.close(n)
 
     if n.lo then
         n.lo:close()
+    end
+
+    if n.wgsync then
+        n.wgsync:close()
     end
 
     wh.close(n.sock4_raw)

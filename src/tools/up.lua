@@ -266,15 +266,12 @@ if opts.interface then
     }
 end
 
-local wgsync
 if n.lo and true then
-    wgsync = require('wgsync').new{
+    n.wgsync = require('wgsync').new{
         n = n,
         interface = opts.interface,
         subnet = conf.subnet,
     }
-
-    atexit(wgsync.close, wgsync)
 end
 
 local self = {}
@@ -296,10 +293,6 @@ while n.running do
 
         if ipc_conn then
             deadlines[#deadlines+1] = ipc_conn:update(socks)
-        end
-
-        if wgsync then
-            deadlines[#deadlines+1] = wgsync:update(socks)
         end
 
         --
