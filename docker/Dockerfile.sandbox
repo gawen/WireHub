@@ -27,6 +27,8 @@ ENV LUA_PATH "/root/wh/src/?.lua"
 ENV LUA_CPATH "/root/wh/.obj/?.so"
 ENV PATH "/root/wh/docker:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
+ENV WH_EXPERIMENTAL_MODIFY_HOSTS true
+
 RUN ln -s /root/wh/docker/sandbox.bashrc /root/.bashrc
 RUN wh completion get-bash > /usr/share/bash-completion/completions/wh
 

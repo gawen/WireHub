@@ -14,6 +14,8 @@
 -- ingoing and outgoing traffic to/from WireGuard. It searches for peers whose
 -- route is unknown, or relay traffic if necessary
 
+local hosts = require('hosts')
+
 local TRY_AUTOCONNECT_EVERY_S = 60
 
 local MT = {
@@ -203,6 +205,8 @@ function MT.__index.close(lo)
         wh.close(lo.sock)
         lo.sock = nil
     end
+
+    hosts.unregister(lo.n)
 end
 
 return function(lo)
@@ -240,6 +244,9 @@ return function(lo)
     -- XXX lazy?
     lo.sniff = wh.sniff('any', 'in', 'wg', " and dst net " .. lo.subnet)
     lo.sock = wh.socket_raw_udp('ip4_hdrincl')
+
+    -- register /etc/hosts
+    hosts.register(lo.n)
 
     return setmetatable(lo, MT)
 end

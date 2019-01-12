@@ -108,6 +108,9 @@ do  -- constants
         -- Default WireHub (and underlying WireGuard) port
         DEFAULT_PORT = 62096,
 
+        -- True to modify /etc/hosts with WireHub trusted peers
+        EXPERIMENTAL_MODIFY_HOSTS = false,
+
         -- Count of fragments to temporarily store while WireHub is trying to
         -- connect to a peer.
         FRAGMENT_MAX = 4,
@@ -158,11 +161,14 @@ do  -- constants
         local env_v = os.getenv(env_prefix .. k)
 
         if env_v and env_v ~= '' then
-            env_v = tonumber(env_v)
-            if env_v == nil then
-                error(string.format("env var %s is not a number", env_prefix .. k))
+            if env_v == 'true' then
+                v = true
+            elseif env_v == 'false' then
+                v = false
+            elseif tonumber(env_v) then
+                v = tonumber(env_v)
             else
-                v = env_v
+                error(string.format("env var %s is not true, false or a number", env_prefix .. k))
             end
         end
 
