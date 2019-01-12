@@ -20,9 +20,9 @@ function help()
         "\n" ..
         "Available network subcommands\n" ..
         "  auth: Authenticate with an alias' private key\n" ..
-        "  p2p: Establish a peer-to-peer communication with a WireHub peer\n" ..
         "  forget: Forget one WireHub peer\n" ..
         "  lookup Lookup for a WireHub peer\n" ..
+        "  p2p: Establish a peer-to-peer communication with a WireHub peer\n" ..
         "  ping: Ping a WireHub peer\n" ..
         "  resolve: Resolve a hostname among all WireHub networks\n" ..
         "Available status subcommands\n" ..
