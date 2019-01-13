@@ -179,10 +179,10 @@ Generate private and public keys.
 
 ```
 node_a # wh genkey tutorial | tee node_a.sk | wh pubkey | tee node_a.k
-tWTOaY8X5XXtC4VzN0EEr_H3dTG0Hos5hCJ7mqxk_Fw
+zW-1lBeQ7IkT6NW6hL_NsV4eOPOwJi_rt1vO-omOEmQ
 ...
 node_b # wh genkey tutorial | tee node_b.sk | wh pubkey | tee node_b.k
-y95rAwKFm9UZkx629NxOH9XEBG7Y1KQfrG7oxRmykTY
+g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
 ```
 
 Set up the private `tutorial` with the trusted peers `node_a` and `node_b`:
