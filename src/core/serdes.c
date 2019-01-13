@@ -34,7 +34,7 @@ static const char* _deser_load(lua_State* L, void* data, size_t* psize) {
 
 #define READ(var)   assert(read(fd, &var, sizeof(var)) == sizeof(var))
 int luaW_read(lua_State* L, int fd) {
-    char type_b;
+    int type;
     uint8_t u8;
     size_t sz;
     lua_Number number;
@@ -42,9 +42,9 @@ int luaW_read(lua_State* L, int fd) {
     int load_ret;
     struct load_ud ld;
 
-    READ(type_b);
+    READ(type);
 
-    switch ((int)type_b) {
+    switch (type) {
     case LUA_TNONE:
         return 0;
 
@@ -130,16 +130,16 @@ static int _ser_dump(lua_State *L, const void* b, size_t size, void* ud) {
 }
 
 int luaW_write(lua_State* L, int idx, int fd) {
-    char type_b = lua_type(L, idx);
+    int type = lua_type(L, idx);
     uint8_t u8;
     lua_Number number;
     size_t sz;
     const char* str;
     luaL_Buffer buf;
 
-    WRITE(type_b);
+    WRITE(type);
 
-    switch ((int)type_b) {
+    switch (type) {
     case LUA_TNONE:
         return 0;
 
@@ -169,8 +169,8 @@ int luaW_write(lua_State* L, int idx, int fd) {
             assert(luaW_write(L, lua_gettop(L), fd) == 1);
             lua_pop(L, 1);
         }
-        type_b = LUA_TNONE;
-        WRITE(type_b);
+        type = LUA_TNONE;
+        WRITE(type);
         break;
 
     case LUA_TFUNCTION:
@@ -190,7 +190,7 @@ int luaW_write(lua_State* L, int idx, int fd) {
     case LUA_TLIGHTUSERDATA:
     case LUA_TUSERDATA:
     case LUA_TTHREAD:
-        luaL_error(L, "unhandled type: %s", lua_typename(L, type_b));
+        luaL_error(L, "unhandled type: %s", lua_typename(L, type));
     }
 
     return 1;
@@ -202,6 +202,11 @@ void luaW_writestack(lua_State* L, int idx, int fd) {
     }
 
     for (; luaW_write(L, idx, fd); ++idx);
+}
+
+void luaW_writenone(int fd) {
+    int type = LUA_TNONE;
+    assert(write(fd, &type, sizeof(int)) == sizeof(int));
 }
 
 #undef WRITE

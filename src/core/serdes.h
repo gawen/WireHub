@@ -29,5 +29,11 @@ int luaW_write(lua_State* L, int idx, int fd);
  */
 void luaW_writestack(lua_State* L, int idx, int fd);
 
+/** Serializes element LUA_TNONE and writes it in `fd`.
+ *
+ * Returns 1 if written; 0 if not.
+ */
+void luaW_writenone(int fd);
+
 #endif  // WH_SERDES_H
 

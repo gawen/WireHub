@@ -33,8 +33,7 @@ static int _tostring(lua_State* L) {
 
 static void delete_worker(struct worker* w) {
     if (w->running) {
-        char type_b = LUA_TNONE;
-        assert(write(w->req.w_fd, &type_b, 1) == 1);
+        luaW_writenone(w->req.w_fd);
         pthread_join(w->thread, NULL);
     }
 
