@@ -341,6 +341,18 @@ return function(n)
         return close()
     end
 
+    H.reload = function(send, close)
+        local ok, err = n:reload()
+
+        if ok then
+            send("OK\n")
+        else
+            send(string.format("ERROR: %s\n", err))
+        end
+
+        return close()
+    end
+
     return H
 end
 

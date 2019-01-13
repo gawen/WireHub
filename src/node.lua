@@ -670,6 +670,108 @@ function MT.__index.resolve(n, opts, cb)
     end
 end
 
+-- Reload configuration
+function MT.__index.reload(n, conf)
+    if conf == nil then
+        conf = wh.fromconf(wh.readconf(n.name))
+
+        if not conf then
+            return false, "unknown network"
+        end
+    end
+
+    -- Some configuration value cannot change
+    if n.namespace ~= conf.namespace then
+        return false, "namespace changed"
+    end
+
+    if n.workbit ~= conf.workbit then
+        return false, "workbit changed"
+    end
+
+    if n.wgsync then
+        if n.wgsync.subnet ~= conf.subnet then
+            return false, "subnet changed"
+        end
+    end
+
+    -- register all peers and aliases
+    local pconfs = {}
+    for _, pconf in ipairs(conf.peers) do
+        if pconf.k then
+            pconfs[pconf.k] = pconf
+        elseif pconf.alias then
+            pconfs[pconf.alias] = pconf
+        end
+    end
+
+    -- remove aliases and trusted peers which are not in the conf anymore
+    for bid, bucket in pairs(n.kad.buckets) do
+        local to_remove = {}
+        for _, p in ipairs(bucket) do
+            local pconf = pconfs[p.k]
+
+            if p.alias and not pconf then
+                n:explain("(conf) remove alias %s", n:key(p))
+                to_remove[#to_remove+1] = p
+
+            elseif p.trust and (not pconf or not pconf.trust) then
+                n:explain("(conf) remove %s from trusted peers", n:key(p))
+                p.trust = false
+            end
+
+            for i = #to_remove, 1, -1 do
+                local p = bucket[to_remove[i]]
+                table.remove(bucket, to_remove[i])
+                bucket[p.k] = nil
+            end
+        end
+    end
+
+    -- add aliases and peers which are not in the kad store yet
+    for k, pconf in pairs(pconfs) do
+        local p, new_p = n.kad:touch(k)
+
+        if pconf.k then
+            p.addr = p.addr or pconf.addr
+        elseif pconf.alias then
+            p.alias = true
+        end
+
+        p.trust = pconf.trust
+        p.hostname = pconf.hostname
+        p.ip = pconf.ip
+        p.is_gateway = pconf.is_gateway
+        p.is_router = pconf.is_router
+        p.bootstrap = pconf.bootstrap
+
+        do
+            local r = {}
+            r[#r+1] = "(conf) "
+            r[#r+1] = new_p and "add " or "update "
+
+            if p.alias then r[#r+1] = "alias "
+            elseif p.bootstrap then r[#r+1] = "bootstrap "
+            elseif p.trust then r[#r+1] = "trust peer "
+            else r[#r+1] = "peer " end
+
+            r[#r+1] = "$(yellow)" .. n:key(p)
+
+            n:explain(table.concat(r))
+        end
+    end
+
+    if n.lo then
+        n.lo:reload()
+    end
+
+    if n.wgsync then
+        n.wgsync:reload()
+    end
+
+    return true
+end
+
 function M.new(n)
     assert(n.sk and n.port and n.port_echo)
 

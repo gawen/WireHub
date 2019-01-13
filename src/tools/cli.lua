@@ -12,6 +12,7 @@ function help()
         "  down: Detach a Wireguard interface from a WireHub network (daemon)\n" ..
         "  genkey: Generates a new private key for a WireHub network\n" ..
         "  pubkey: Reads a private key from stdin and writes a public key to stdout\n" ..
+        "  reload: Reload the configuration\n" ..
         "  set: Change the current network configuration\n" ..
         "  setconf: Applies a configuration file to a WireHub network\n" ..
         "  showconf: Shows the current configuration of a given WireHub network\n"..
@@ -94,6 +95,7 @@ SUBCMDS = {
     "p2p",
     "ping",
     "pubkey",
+    "reload",
     "resolve",
     "set",
     "setconf",

@@ -131,6 +131,7 @@ if cur_idx == 2 then
         subcmd == 'lookup' or
         subcmd == 'p2p' or
         subcmd == 'ping' or
+        subcmd == 'reload' or
         subcmd == 'show'
     ) then
         local interfaces = wh.ipc_list()

@@ -209,6 +209,11 @@ function MT.__index.close(lo)
     hosts.unregister(lo.n)
 end
 
+function MT.__index.reload(lo)
+    -- register /etc/hosts
+    hosts.register(lo.n)
+end
+
 return function(lo)
     assert(lo.n)
 
@@ -244,9 +249,6 @@ return function(lo)
     -- XXX lazy?
     lo.sniff = wh.sniff('any', 'in', 'wg', " and dst net " .. lo.subnet)
     lo.sock = wh.socket_raw_udp('ip4_hdrincl')
-
-    -- register /etc/hosts
-    hosts.register(lo.n)
 
     return setmetatable(lo, MT)
 end

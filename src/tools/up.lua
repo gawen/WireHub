@@ -190,63 +190,6 @@ local handlers = require('handlers_ipc')(n)
 ipc_conn = require('ipc').bind(opts.interface or wh.tob64(n.k), handlers)
 atexit(ipc_conn.close, ipc_conn)
 
---
-
-for _, pconf in ipairs(conf.peers) do
-    -- do not bootstrap with self
-    local p
-    if pconf.k then
-        p = n.kad:touch(pconf.k)
-        p.addr = pconf.addr
-    elseif pconf.alias then
-        p = n.kad:touch(pconf.alias)
-        p.alias = true
-    end
-
-    if p then
-        p.trust = pconf.trust
-        p.hostname = pconf.hostname
-        p.ip = pconf.ip
-        p.is_gateway = pconf.is_gateway
-        p.is_router = pconf.is_router
-        p.bootstrap = pconf.bootstrap
-
-        if false then
-            local m = {}
-            m[#m+1] = string.format("add %s %s",
-                p.alias and 'alias' or 'peer',
-                p.hostname or wh.tob64(p.k)
-            )
-
-            if p.is_router then m[#m+1] = " (router)" end
-            if p.is_gateway then m[#m+1] = " (gateway)" end
-
-            printf(table.concat(m))
-        end
-
-
-        if p.bootstrap then
-            printf("bootstrap with $(yellow)%s$(reset) (%s)", wh.tob64(p.k), p.addr)
-        end
-    end
-end
-
---[[
-local s
-if n.mode == 'unknown' then
-    n:detect_nat(nil, function(mode)
-        -- mode=blocked, cone, direct, offline
-        printf("$(magenta)NAT TYPE: %s", mode)
-
-        n.is_nated = mode ~= 'direct'
-
-        s = n:search(n.k, 'lookup')
-    end)
-else
-    s = n:search(n.k, 'lookup')
-end
---]]
-
 -- log
 
 do
@@ -274,6 +217,9 @@ if n.lo and true then
     }
 end
 
+-- Load peers from configuration
+n:reload(conf)
+
 local self = {}
 
 local LOADING_CHARS = {'-', '\\', '|', '/'}
@@ -289,11 +235,12 @@ while n.running do
     -- update file descriptors to poll and next deadlines
     do
         local deadlines = {}
-        deadlines[#deadlines+1] = n:update(socks)
 
         if ipc_conn then
             deadlines[#deadlines+1] = ipc_conn:update(socks)
         end
+
+        deadlines[#deadlines+1] = n:update(socks)
 
         --
 
