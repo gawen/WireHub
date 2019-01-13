@@ -263,7 +263,6 @@ if opts.interface then
     n.lo = require('lo'){
         n = n,
         auto_connect = true,
-        interface = opts.interface .. '-rl'
     }
 end
 
