@@ -18,6 +18,9 @@ function help()
         "  up: Create a WireHub network and interface (daemon)\n" ..
         "  workbit: Print workbits for a given WireGuard public key\n" ..
         "\n" ..
+        "Available status subcommands\n" ..
+        "  show: Shows the current configuration\n" ..
+        "\n" ..
         "Available network subcommands\n" ..
         "  auth: Authenticate with an alias' private key\n" ..
         "  forget: Forget one WireHub peer\n" ..
@@ -25,8 +28,6 @@ function help()
         "  p2p: Establish a peer-to-peer communication with a WireHub peer\n" ..
         "  ping: Ping a WireHub peer\n" ..
         "  resolve: Resolve a hostname among all WireHub networks\n" ..
-        "Available status subcommands\n" ..
-        "  show: Shows the current configuration\n" ..
         "\n" ..
         "Available advanced subcommands\n" ..
         "  bid: Calculate BID between two keys\n" ..
