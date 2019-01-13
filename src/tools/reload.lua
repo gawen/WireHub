@@ -63,7 +63,7 @@ table.sort(names)
 for _, name in ipairs(names) do
     local status = call(name, 'reload')
 
-    if status ~= 'OK' then
+    if status ~= 'OK\n' then
         printf("interface $(bold)%s$(reset): %s", name,status)
     end
 end
