@@ -80,36 +80,34 @@ local function generate_host(n, map_cb)
     return table.concat(r)
 end
 
-local function update_host(...)
-    local new_host = generate_host(...)
+local function update_host(n, append)
+    if not wh.EXPERIMENTAL_MODIFY_HOSTS then
+        return
+    end
+
+    local append_n
+    if append then
+        append_n = n
+    end
+
+    local new_host = generate_host(append_n, function(interface, network)
+        return interface == n.p.k and network == n.name
+    end)
 
     local fh = io.open(HOSTS_PATH, "w")
     fh:write(new_host)
     fh:close()
 end
 
-
 -- Register trusted nodes of n
 function M.register(n)
-    if not wh.EXPERIMENTAL_MODIFY_HOSTS then
-        return
-    end
-
-    return update_host(n, nil)
+    return update_host(n, true)
 end
 
 -- Unregister nodes from n
 function M.unregister(n)
-    if not wh.EXPERIMENTAL_MODIFY_HOSTS then
-        return
-    end
-
-    update_host(nil, function(interface, network)
-        return interface == n.p.k and network == n.name
-    end)
+    return update_host(n, false)
 end
-
---
 
 return M
 
