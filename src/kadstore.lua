@@ -6,6 +6,8 @@ local MT = {
     __index = {},
 }
 
+-- Touch a peer with key k. If peer does not exist, creates it. Returns two
+-- values, the peer table and a boolean if the peer was created.
 function MT.__index.touch(t, k)
     if t.root.k == k then
         t.touched[k] = t.root
@@ -20,6 +22,7 @@ function MT.__index.touch(t, k)
     end
 
     local p = b[k]
+    local new_p = p == nil
     if p == nil then
         p = {
             k=k,
@@ -31,7 +34,7 @@ function MT.__index.touch(t, k)
 
     t.touched[p.k] = p
 
-    return peer(p)
+    return peer(p), new_p
 end
 
 function MT.__index.get(t, k)
