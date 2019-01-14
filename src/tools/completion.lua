@@ -185,7 +185,10 @@ if cur_idx == 3 then
     end
 end
 
-if cur_idx == 2 and opt_count ~= 1 then
+if cur_idx == 2 and (
+    cmd[cur_idx+1] ~= nil and string.sub(cmd[cur_idx+1], 1) == 'h' or
+    opt_count ~= 1
+) then
     opt('help')
 end
 
