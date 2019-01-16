@@ -189,7 +189,7 @@ static void _check_allowedip(lua_State* L, int idx, struct wg_device* d, struct 
         break;
 
     default:
-        return perror("unknown sa_family");
+        luaL_error(L, "unknown sa_family");
     };
     lua_pop(L, 1);
 
