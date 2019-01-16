@@ -6,8 +6,6 @@
 -- Update the last time each peer was seen by WireGuard, to have a unified view
 -- for WireHub and WireGuard.
 
--- XXX handles sync from wg to wh
-
 local REFRESH_EVERY = wh.NAT_TIMEOUT / 2
 
 local M = {}
@@ -152,6 +150,11 @@ local function update_touched_peers(sy)
 end
 
 function MT.__index.update(sy, socks)
+    -- if wireguard is disabled, do nothing
+    if not sy.wg_enabled then
+        return
+    end
+
     local deadlines = {}
 
     -- read WireGuard tunnel peer's activity and update p.last_seen
@@ -181,23 +184,51 @@ function MT.__index.update(sy, socks)
     end
     deadlines[#deadlines+1] = deadline
 
-    -- if current peer has a private IP, update WireGuard conf
-    if sy.wg_enabled then
-        assert(sy.n.p.ip)
-        update_touched_peers(sy)
+    -- update WireGuard with touched peers
+    update_touched_peers(sy)
+
+    -- if peer's private IP changed, update
+    if sy.n.p.ip ~= sy.ip then
+        sy.ip = sy.n.p.ip
+
+        if sy.ip then
+            local slash_idx = string.find(sy.subnet, '/')
+            local cidr = string.sub(sy.subnet, slash_idx+1)
+
+            explain(sy, "private IP is %s/%d", sy.ip, cidr)
+            wh.wg.set_addr(sy.interface, sy.ip, cidr)
+        else
+            wh.wg.set_addr(sy.interface)
+        end
     end
 
     return min(deadlines)
 end
 
 function MT.__index.reload(sy)
-    -- if node has no IP but wireguard was enabled, remove all wireguard peers
-    -- and disable
-    if not sy.n.p.ip and sy.wg_enabled then
-        remove_all_peers(sy)
+    local new_wg_enabled = sy.subnet and sy.n.p.ip and true
+
+    -- if wg has been enabled
+    if not sy.wg_enabled and new_wg_enabled then
+
+        -- remove if already exists
+        if wh.wg.get(sy.interface) then
+            wh.wg.delete(sy.interface)
+        end
+
+        explain(sy, "enable WireGuard interface %s", sy.interface)
+        wh.wg.add(sy.interface)
+        wh.wg.set{name=sy.interface, listen_port=sy.n.port, private_key=sy.n.sk}
+        wh.wg.set_link(sy.interface, true)
+
+    -- if wg has been disabled
+    elseif sy.wg_enabled and not new_wg_enabled then
+        explain(sy, "disable WireGuard interface %s", sy.interface)
+        wh.wg.delete(sy.interface)
+        sy.ip = nil
     end
 
-    sy.wg_enabled = not not sy.n.p.ip
+    sy.wg_enabled = new_wg_enabled
 
     -- if enabled, remove all non trusted peers
     if sy.wg_enabled then
@@ -228,6 +259,9 @@ function MT.__index.reload(sy)
 end
 
 function MT.__index.close(sy)
+    if sy.wg_enabled then
+        wh.wg.delete(sy.interface)
+    end
 end
 
 function M.new(sy)

@@ -131,6 +131,11 @@ do  -- constants
         -- Seconds. Keep-alive timeout for NAT-ed peers. Should be less than NAT timeout.
         KEEPALIVE_NAT_TIMEOUT = 25,
 
+        -- Boolean. True if a WireGuard tunnel should be instantiated when IP
+        -- traffic may be routed. If false, the WireHub peer will never share IP
+        -- traffic, and will just be a "headless" part of the network.
+        WIREGUARD_ENABLED = true,
+
         -- Maximum tentative of UDP hole punching before failure.
         MAX_PUNCH_RETRY = 10,
 

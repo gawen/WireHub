@@ -29,7 +29,26 @@
 local cmd = arg[1]
 
 function help()
-    printf('Usage: wh up <network name> {interface <interface> | [private-key <file path>] [listen-port <port>]} [mode {unknown | direct | nat}]')
+    printf(
+"Usage: wh up <network name> [private-key <file path>] [interface <interface>] [listen-port <port>] [mode {unknown | direct | nat}]\n" ..
+"\n" ..
+"If the argument 'private-key' is not set, one ephemeron key will be generated\n" ..
+"for the session, and destroyed when the daemon stops.\n" ..
+"\n" ..
+"If a WireGuard 'interface' is not set, it will be be default the concatenation\n" ..
+"of 'wh-' and the 8 first characters of the base64 form of public key.\n" ..
+"\n" ..
+"If 'listen-port' is not set, it will be by default 0. If 'listen-port is 0,\n" ..
+"WireHub will pick a random listen port between 1024 and 65535.\n" ..
+"\n" ..
+"Example:\n" ..
+"  Starts an ephemeron peer for network 'public'\n" ..
+"    wh up public\n" ..
+"\n" ..
+"  Starts a peer for network 'foo'\n" ..
+"    wh up foo private-key /my/keys/foo.sk\n" ..
+""
+)
 end
 
 -- XXX move this after configuration is checked
@@ -62,17 +81,9 @@ if not name then
     return help()
 end
 
-local private_key_path
-local wg
 local opts = parsearg(3, {
-    interface = function(s)
-        wg = wh.wg.get(s)
-        return s
-    end,
-    ["private-key"] = function(path)
-        private_key_path = path
-        return wh.readsk(path)
-    end,
+    interface = tostring,
+    ["private-key"] = wh.readsk,
     ["listen-port"] = tonumber,
     mode = function(s)
         if s ~= 'unknown' and
@@ -95,93 +106,70 @@ if not conf then
     return help()
 end
 
-if not opts.interface and not opts['private-key'] then
-    printf('no key specified. generates an ephemeron one. this might be long...')
-    local _, _, sk, k = wh.genkey(
-        conf.namespace,
-        conf.workbit or 0,
-        0
-    )
-
-    opts['private-key'] = sk
-end
-
 -- now is a global
 now = wh.now()
 local start_time = now
 
---
-
 status("starting...")
 
-local private_key
-local listen_port
-local n
+-- if no private key is set, generate an ephemeron one
+if not opts['private-key'] then
+    local workbit = conf.workbit or 0
 
---
+    printf('no key specified. generates an ephemeron one (ns: %q, workbit: %d). this might be long...',
+        conf.namespace, workbit)
 
-if opts.interface then
-    if not conf.subnet then
-        printf('subnetwork not defined: %s', name)
-        return help()
-    end
+    _, _, opts['private-key'], _ = wh.genkey(conf.namespace, workbit, 0)
+end
+assert(opts['private-key'])
 
-    if wg then
-        if not wg.private_key or not wg.public_key then
-            printf("Interface %s does not have a private key", opts.interface)
-            return
-        end
 
-        if not wg.listen_port then
-            wg.listen_port = wh.DEFAULT_PORT
-            -- XXX
-            execf('wg set %s listen-port %d', opts.interface, wg.listen_port)
-        end
-
-        local wb = wh.workbit(wg.public_key, conf.namespace)
-        if wb < (conf.workbit or 0) then
-            printf("Insufficient workbit: %d (minimum is %d)", wb, conf.workbit or 0)
-            return
-        end
-
-        private_key = wg.private_key
-        listen_port = wg.listen_port
-    else
-        error("ephemeron wireguard interface not implemented")
-        --execf("ip link add dev %s type wireguard", opts.interface)
-        --execf("wg set %s private-key %s listen-port 0", opts.interface, skpath)
-        --execf("ip link set %s up", opts.interface)
-    end
-else
-    private_key = opts['private-key']
-    listen_port = opts['listen-port'] or wh.DEFAULT_PORT
-
-    if listen_port == 0 then
-        listen_port = randomrange(1024, 65535)
-    end
-
-    assert(private_key)
+-- if the interface is not set, set a default one, which depends on the (public)
+-- key.
+if not opts.interface then
+    local k = wh.publickey(opts['private-key'])
+    opts.interface = 'wh-' .. string.sub(wh.tob64(k), 1, 8)
 end
 
---
+-- if no listen port is set, takes the default
+if not opts['listen-port'] then
+    opts['listen-port'] = 0
+end
 
-local n_log = tonumber(os.getenv('LOG')) or 0
+-- if listen port is set to 0, pick one randomly between 1024 and 65535
+if opts['listen-port'] == 0 then
+    opts['listen-port'] = randomrange(1024, 65535)
+end
 
-n = wh.new{
+-- create node
+local n = wh.new{
     name=name,
-    sk=private_key,
-    port=listen_port,
-    port_echo=listen_port+1, -- XXX ?
+    sk=opts['private-key'],
+    port=opts['listen-port'],
+    port_echo=opts['listen-port']+1, -- XXX ?
     namespace=conf.namespace,
     workbit=conf.workbit,
     mode=opts.mode,
-    log=n_log,
+    log=tonumber(os.getenv('LOG')),
     ns={
         require('ns_keybase'),
     },
 }
 
 atexit(n.close, n)
+
+if wh.WIREGUARD_ENABLED then
+    n.lo = require('lo'){
+        n = n,
+        auto_connect = true,
+    }
+
+    n.wgsync = require('wgsync').new{
+        n = n,
+        interface = opts.interface,
+        subnet = conf.subnet,
+    }
+end
 
 --
 
@@ -193,34 +181,15 @@ atexit(ipc_conn.close, ipc_conn)
 -- log
 
 do
-    local msg = {"wirehub listening as $(yellow)", wh.tob64(wh.publickey(private_key)), "$(reset)"}
+    local msg = {"wirehub listening as $(yellow)", wh.tob64(n.k), "$(reset)"}
     if DEVICE then msg[#msg+1] = string.format(" for $(yellow)%s$(reset)", DEVICE) end
     msg[#msg+1] = string.format(" on $(yellow)%d$(reset) (port echo %d)", n.port, n.port_echo)
     msg[#msg+1] = string.format(" (mode: $(yellow)%s$(reset))", n.mode)
     printf(table.concat(msg))
 end
 
--- main loop
-
-if opts.interface then
-    n.lo = require('lo'){
-        n = n,
-        auto_connect = true,
-    }
-end
-
-if n.lo and true then
-    n.wgsync = require('wgsync').new{
-        n = n,
-        interface = opts.interface,
-        subnet = conf.subnet,
-    }
-end
-
 -- Load peers from configuration
 n:reload(conf)
-
-local self = {}
 
 local LOADING_CHARS = {'-', '\\', '|', '/'}
 local LOADING_CHARS = {'▄▄', '█▄', '█ ', '█▀', '▀▀', '▀█', ' █', '▄█'}
@@ -249,25 +218,6 @@ while n.running do
         if deadline ~= nil then
             timeout = deadline-now
             if timeout < 0 then timeout = 0 end
-        end
-    end
-
-    -- XXX
-    do
-        if self.ip ~= n.p.ip then
-            self.ip = n.p.ip
-
-            local ip_subnet = (
-                self.ip:addr() ..
-                string.sub(conf.subnet, string.find(conf.subnet, '/'), -1)
-            )
-
-            printf('$(green)new ip: %s$(reset)', ip_subnet)
-            execf('ip addr add %s dev %s', ip_subnet, opts.interface)
-        end
-
-        if self.hostname ~= n.p.hostname then
-
         end
     end
 

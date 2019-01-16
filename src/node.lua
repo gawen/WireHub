@@ -784,9 +784,15 @@ function M.new(n)
         assert(n.namespace)
     end
 
+    n.k = wh.publickey(n.sk)
+
+    -- checking workbit
+    if wh.workbit(n.k, n.namespace) < n.workbit then
+        error(string.format("insufficient workbit. minimum is %d.", n.workbit))
+    end
+
     n.log = n.log or 0
     n.running = true
-    n.k = wh.publickey(n.sk)
     n.in_udp = wh.sniff('any', 'in', 'wh', " and dst port " .. tostring(n.port))
     n.sock_echo = wh.socket_udp(wh.address('0.0.0.0', n.port_echo))
     n.sock4_raw = wh.socket_raw_udp("ip4")

@@ -18,6 +18,7 @@ if arg[1] == nil then
 end
 
 local id = tonumber(arg[1])
+local mode = arg[2] or 'unknown'
 assert(id)
 
 function execf(...)
@@ -27,27 +28,20 @@ function execf(...)
 end
 
 execf("rm -f /tmp/log")
-execf("ip link del wg")
 execf("make")
-
 print(string.rep('-', 80))
 
 execf("wh clearconf test")
 execf("cp tests/keys/config /etc/wirehub/test")
 
-local mode = arg[2] or 'unknown'
 
 skpath = string.format('tests/keys/%d.sk', id)
 
---execf('cat %s | wg pubkey > k', skpath)
-
-print("")
-execf("ip link add dev wg%s type wireguard", id)
-execf("wg set wg%s private-key %s listen-port 0", id, skpath)
-execf("ip link set wg%s up", id)
+args = string.format("up test private-key %s mode %s", skpath, mode)
 
 if os.getenv("VALGRIND") then
-    execf("WH_LOGPATH=/tmp/log valgrind /usr/local/bin/lua src/tools/cli.lua up test interface wg%s mode %s", id, mode)
+    execf("WH_LOGPATH=/tmp/log valgrind /usr/local/bin/lua src/tools/cli.lua " .. args)
 else
-    execf("WH_LOGPATH=/tmp/log wh up test interface wg%s mode %s", id, mode)
+    execf("WH_LOGPATH=/tmp/log wh " .. args)
 end
+
