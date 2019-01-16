@@ -465,6 +465,72 @@ static int _set_device(lua_State* L) {
     return 0;
 }
 
+// XXX use libmnl
+// XXX injection!
+
+#define CMD(...)    do { \
+    char cmd[256]; \
+    snprintf(cmd, sizeof(cmd), __VA_ARGS__); \
+    int ret = system(cmd); \
+    if (ret < 0) { \
+        luaL_error(L, "command returned %d: %s", ret, cmd); \
+    } \
+} while(0)
+
+static int _set_link(lua_State* L) {
+    const char* ifn = luaL_checkstring(L, 1);
+    luaL_checktype(L, 2, LUA_TBOOLEAN);
+    int up = lua_toboolean(L, 2);
+
+    // XXX check ifn is wireguard
+
+    CMD("ip link set %s %s", ifn, up ? "up" : "down");
+
+    return 0;
+}
+
+static int _set_addr(lua_State* L) {
+    const char* ifn = luaL_checkstring(L, 1);
+
+    // XXX check ifn is wireguard
+
+    // if only argument is interface, flush addresses
+    if (lua_gettop(L) == 1) {
+        CMD("ip addr flush %s", ifn);
+        return 0;
+    }
+
+    // else, add address
+    struct address* addr = luaL_testudata(L, 2, "address");
+    char addr_s[INET_ADDRSTRLEN+1];
+    int max_cidr;
+    switch (addr->sa_family) {
+    case AF_INET:
+        max_cidr = 32;
+        inet_ntop(addr->sa_family, &addr->in4.sin_addr, addr_s, sizeof(addr_s)-1);
+        break;
+    case AF_INET6:
+        max_cidr = 128;
+        inet_ntop(addr->sa_family, &addr->in6.sin6_addr, addr_s, sizeof(addr_s)-1);
+        break;
+
+    default:
+        luaL_error(L, "unknown sa_family");
+    };
+
+    int isnum;
+    int cidr = lua_tointegerx(L, 3, &isnum);
+    if (!isnum || cidr < 0 || max_cidr < cidr) {
+        return luaL_error(L, "invalid CIDR");
+    }
+
+    CMD("ip addr add %s/%d dev %s", addr_s, cidr, ifn);
+
+    return 0;
+}
+
+#undef CMD
+
 static const luaL_Reg funcs[] = {
     {"add", _add_device},
     {"check", _check},
@@ -472,8 +538,9 @@ static const luaL_Reg funcs[] = {
     {"get", _get_device},
     {"list_names", _list_device_names},
     {"set", _set_device},
-
-    { NULL, NULL}
+    {"set_addr", _set_addr},
+    {"set_link", _set_link},
+    { NULL, NULL }
 };
 
 LUAMOD_API int luaopen_wg(lua_State* L) {
