@@ -209,7 +209,7 @@ function MT.__index.close(lo)
     hosts.unregister(lo.n)
 end
 
-function MT.__index.reload(lo)
+function MT.__index.refresh(lo)
     -- register /etc/hosts
     hosts.register(lo.n)
 end

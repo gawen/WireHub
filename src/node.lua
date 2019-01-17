@@ -760,11 +760,11 @@ function MT.__index.reload(n, conf)
     end
 
     if n.lo then
-        n.lo:reload()
+        n.lo:refresh()
     end
 
     if n.wgsync then
-        n.wgsync:reload()
+        n.wgsync:refresh()
     end
 
     return true

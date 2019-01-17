@@ -205,7 +205,7 @@ function MT.__index.update(sy, socks)
     return min(deadlines)
 end
 
-function MT.__index.reload(sy)
+function MT.__index.refresh(sy)
     local new_wg_enabled = sy.subnet and sy.n.p.ip and true
 
     -- if wg has been enabled
