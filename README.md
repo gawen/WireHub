@@ -142,8 +142,6 @@ You may stop the WireHub peer as so:
 
 ### Create a simple private network
 
-[![demo](https://asciinema.org/a/217920.svg)](https://asciinema.org/a/217920?autoplay=1)
-
 Let's create a private network called `tutorial`, with two peers: `node_a` and
 `node_b`.
 
@@ -178,10 +176,10 @@ both nodes:
 Generate private and public keys.
 
 ```
-node_a # wh genkey tutorial | tee node_a.sk | wh pubkey | tee node_a.k
+node_a # wh genkey tutorial | tee sk | wh pubkey | tee k
 zW-1lBeQ7IkT6NW6hL_NsV4eOPOwJi_rt1vO-omOEmQ
 ...
-node_b # wh genkey tutorial | tee node_b.sk | wh pubkey | tee node_b.k
+node_b # wh genkey tutorial | tee sk | wh pubkey | tee k
 g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
 ```
 
@@ -192,6 +190,40 @@ on both nodes:
 ```
 # wh set tutorial ip 10.0.42.1 name node_a peer zW-1lBeQ7IkT6NW6hL_NsV4eOPOwJi_rt1vO-omOEmQ
 # wh set tutorial ip 10.0.42.2 name node_b peer g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
+```
+
+Start the private network. Run on both nodes:
+
+```
+# wh up tutorial private-key ./sk
+```
+
+You can check the status of the VPN:
+
+```
+node_a # wh
+interface wg-zW-1lBeQ7, network tutorial, node node_a <NAT>
+  public key: zW-1lBeQ7IkT6NW6hL_NsV4eOPOwJi_rt1vO-omOEmQ
+
+  peers
+     node_b
+...
+node_b # wh
+interface wg-g878Bf9ZD, network tutorial, node node_b <NAT>
+  public key: g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
+
+  peers
+     node_a
+```
+
+Now ping `node_b` from `node_a`:
+
+```
+peer_a # ping node_b
+PING 10.0.42.2 (10.0.42.2): 56 data bytes
+64 bytes from 10.0.42.2: seq=0 ttl=64 time=106.801 ms
+64 bytes from 10.0.42.2: seq=1 ttl=64 time=49.778 ms
+...
 ```
 
 You can check the current configuration of network `tutorial`:
@@ -223,51 +255,6 @@ IP = 10.0.42.2
 PublicKey = g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
 ```
 
-Create a WireGuard tunnel for the network `tutorial`:
-
-```
-node_a # ip link add dev wg-tutorial type wireguard
-node_a # wg set wg-tutorial private-key ./node_a.sk listen-port 0
-node_a # ip link set wg-tutorial up
-...
-node_b # ip link add dev wg-tutorial type wireguard
-node_b # wg set wg-tutorial private-key ./node_b.sk listen-port 0
-node_b # ip link set wg-tutorial up
-```
-
-Start the private network. Run on both nodes:
-
-```
-# wh up tutorial interface wg-tutorial
-```
-
-You can check the status of the VPN:
-
-```
-node_a # wh
-interface wg-tutorial, network tutorial, node node_a <NAT>
-  public key: zW-1lBeQ7IkT6NW6hL_NsV4eOPOwJi_rt1vO-omOEmQ
-
-  peers
-     node_b
-...
-node_b # wh
-interface wg-tutorial, network tutorial, node node_b <NAT>
-  public key: g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
-
-  peers
-     node_a
-```
-
-Now ping `node_b` from `node_a`:
-
-```
-peer_a # ping 10.0.42.2
-PING 10.0.42.2 (10.0.42.2): 56 data bytes
-64 bytes from 10.0.42.2: seq=0 ttl=64 time=106.801 ms
-64 bytes from 10.0.42.2: seq=1 ttl=64 time=49.778 ms
-...
-```
 
 ### Zero Netcat
 
