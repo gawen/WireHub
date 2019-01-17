@@ -689,9 +689,9 @@ function MT.__index.reload(n, conf)
     end
 
     if n.wgsync then
-        if n.wgsync.subnet ~= conf.subnet then
-            return false, "subnet changed"
-        end
+        n.wgsync.subnet = conf.subnet
+
+        -- XXX check self peer's IP is in the subnet
     end
 
     -- register all peers and aliases

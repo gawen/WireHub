@@ -167,7 +167,6 @@ if wh.WIREGUARD_ENABLED then
     n.wgsync = require('wgsync').new{
         n = n,
         interface = opts.interface,
-        subnet = conf.subnet,
     }
 end
 
