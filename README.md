@@ -13,8 +13,8 @@ testing only.
 
 ## Features
 
-- **Easy management of networks**: a network is defined by a single configuration
-  file which lists trusted peers.
+- **Simple network description**: the minimal configuration of a network is a
+  list of the public key, private IP and hostname for each member.
 
 - **Cryptographic network addresses**: the network address of a peer is - or
   derived from - a [Curve25519][curve25519] public key.
@@ -24,13 +24,11 @@ testing only.
   discovery mechanism to find new peers. [Sybil attack][sybil] is mitigated with
   a configurable Proof-of-Work parameter;
 
-- **Peer-to-Peer communication**: WireHub goes through NATs, using [UPnP
-  IGD][igd] to map new ports on compatible routers, or using [UDP Hole
-  Punching][udp-hole-punching] techniques.
-
-- **Relay communication**: if a peer-to-peer communication cannot be established, network
-  traffic is relayed through trusted relayed servers, or at the very least peers
-  from the community of WireHub nodes.
+- **Peer-to-Peer and relayed communication**: WireHub goes through NATs, using
+  [UPnP IGD][igd] to map new ports on compatible routers, or using [UDP Hole
+  Punching][udp-hole-punching] techniques. If a P2P communication cannot be
+  established, network traffic is relayed through trusted relayed servers or
+  peers from the community of WireHub nodes.
 
 ## Getting started
 
@@ -303,8 +301,6 @@ node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV
 
 ## Current limitations
 
-- **Still panic**: still quite rough to use. Do not expect the daemon to be stable;
-
 - **Untrusted cryptography**: even if WireHub basics cryptographic routines are
   based on the trusted [Libsodium][libsodium], the WireHub cryptographic
   architecture has not been audited yet. If you're interested to contribute on
@@ -315,10 +311,10 @@ node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV
   [`dev-testbed`](https://github.com/Gawen/WireHub/tree/develop-testbed) and
   [`micronet`][micronet].
 
-- **Poor documentation**: WireHub was a personal project and lacks
-  documentation. While this will be progressively solved in the future, in the
-  meantime, feel free to get in touch if you have any question regarding the
-  internals.
+- **Still panic**: still quite rough to use. Do not expect the daemon to be stable;
+
+- **Poor documentation**: WireHub was a side project and still lacks
+  documentation.
 
 - **For a relayed peer, only one relay is used**: the traffic is not distributed
   yet between several relays, which makes a single point of failure of WireHub
@@ -331,11 +327,8 @@ node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV
 
 ## Future
 
-- **GNU Name Service Switch plug-in** to allow name resolution of WireHub peers
-  by common Linux programs (see `wh resolve`).
-
-- **Zero-configuration networking** with IPv6 [ORCHID][orchid] addresses: every
-  peer has an allocated IP address (see `wh orchid`);
+- **Zero-configuration networking** with IPv6 [ORCHID][orchid] addresses, to
+  automatically allocate each peer a default private IP (see `wh orchid`);
 
 ## Overall source code architecture
 
