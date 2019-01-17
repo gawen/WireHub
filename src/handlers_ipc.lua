@@ -45,15 +45,17 @@ return function(n)
             connects=n.connects,
             frag_counter=n.frag_counter,
             jitter_rand=n.jitter_rand,
-            key=n.k,
             mode=n.mode,
+            namespace=n.namespace,
             nat=set(n.nat_detectors),
             opts=opts,
             p=n.p,
             peers={},
             port=n.port,
             searches=set(n.searches),
+            subnet=n.wgsync and n.wgsync.subnet,
             version=wh.version,
+            workbit=n.workbit,
         }
 
         for bid, bucket in pairs(n.kad.buckets) do
