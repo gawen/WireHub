@@ -22,6 +22,19 @@ function writeb64(fp, buf, mode)
     fh:close()
 end
 
+function WH(...)
+    local args = string.format(...)
+
+    args = args .. " &"
+
+    if os.getenv("VALGRIND") then
+        execf("WH_LOGPATH=/tmp/log valgrind /usr/local/bin/lua src/tools/cli.lua " .. args)
+    else
+        execf("WH_LOGPATH=/tmp/log wh " .. args)
+    end
+
+end
+
 execf("make > /dev/null 2> /dev/null")
 execf("wh clearconf znc")
 execf("wh set znc workbit 8 subnet 10.0.42.1/24")
@@ -31,10 +44,6 @@ execf("wh genkey znc | tee /tmp/znc.sk | wh pubkey > /tmp/znc.k")
 
 local k = readb64('/tmp/znc.k')
 
-execf("ip link add dev wg1 type wireguard")
-execf("wg set wg1 private-key /tmp/znc.sk listen-port 0")
-execf("ip link set wg1 up")
-
 local is_server = arg[1] == nil
 
 if is_server then
@@ -42,15 +51,15 @@ if is_server then
     local alias_sk = readb64('/tmp/alias.znc.sk', 'wg')
     local alias_k = readb64('/tmp/alias.znc.k')
 
-    execf("wh set znc ip 10.0.42.1 name server.znc router yes peer %s", wh.tob64(k))
-    execf("wh set znc ip 10.0.42.2 name client.znc alias %s", wh.tob64(alias_k))
-    execf("wh up znc interface wg1 mode nat")
-
     local invit = wh.tob64(k .. alias_sk)
-
     print("znc invitation: " .. invit)
 
-    execf("nc -l -p 1234")
+    execf("wh set znc ip 10.0.42.1 name server.znc router yes peer %s", wh.tob64(k))
+    execf("wh set znc ip 10.0.42.2 name client.znc alias %s", wh.tob64(alias_k))
+    WH("up znc interface wh-0nc private-key /tmp/znc.sk mode nat")
+
+    execf("sleep 1")
+    execf("nc -l -p 1024 -v")
 else
     local keys = wh.fromb64(arg[1])
     local server_k = string.sub(keys, 1, 32)
@@ -61,11 +70,11 @@ else
 
     execf("wh set znc ip 10.0.42.1 name server.znc router yes peer %s", wh.tob64(server_k))
     execf("wh set znc ip 10.0.42.2 name client.znc alias %s", wh.tob64(alias_k))
-    execf("wh up znc interface wg1 mode nat")
+    WH("up znc interface wh-0nc mode nat")
 
     execf("sleep 1")
-    execf("wh auth wg1 %s /tmp/alias.znc.sk", wh.tob64(server_k))
+    execf("wh auth wh-0nc %s /tmp/alias.znc.sk", wh.tob64(server_k))
 
     execf("sleep 1")
-    execf("nc 10.0.42.1 1234")
+    execf("nc server.znc 1024 -v")
 end
