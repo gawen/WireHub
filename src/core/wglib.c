@@ -494,9 +494,10 @@ static int _set_addr(lua_State* L) {
 
     // XXX check ifn is wireguard
 
+    CMD("ip addr flush %s", ifn);
+
     // if only argument is interface, flush addresses
     if (lua_gettop(L) == 1) {
-        CMD("ip addr flush %s", ifn);
         return 0;
     }
 
