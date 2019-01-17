@@ -26,16 +26,6 @@ function wh.key(k_or_p, n)
         end
     end
 
-    if false then
-        local dk = dbg_keys[k]
-        if dk == nil then
-            dk = string.format("KEY_%d", dbg_keys.idx)
-            dbg_keys.idx = dbg_keys.idx + 1
-            dbg_keys[k] = dk
-        end
-        return dk
-    end
-
     local b64 = wh.tob64(k)
     b64 = string.sub(b64, 1, 10)
     return b64
