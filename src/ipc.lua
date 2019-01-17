@@ -78,6 +78,8 @@ local function on_sock_readable(ipc, sock, cmd)
                     return false
                 end
 
+                printf("$(blue)ipc: %s", cmd)
+
                 state.close_cb = cpcall(cb, send, _close, ...)
                 return true
             end)(string.match(cmd, pattern))
