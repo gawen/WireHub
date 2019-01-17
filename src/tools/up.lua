@@ -188,7 +188,12 @@ do
 end
 
 -- Load peers from configuration
-n:reload(conf)
+local ok, err = n:reload(conf)
+
+if not ok then
+    print("Configuration incorrect: %s", err)
+    return -1
+end
 
 local LOADING_CHARS = {'-', '\\', '|', '/'}
 local LOADING_CHARS = {'▄▄', '█▄', '█ ', '█▀', '▀▀', '▀█', ' █', '▄█'}
