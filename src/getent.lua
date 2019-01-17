@@ -58,7 +58,7 @@ local function find_local_hostname(n, h, cb)
 
     for _, bucket in ipairs(n.kad.buckets) do
         for _, p in ipairs(bucket) do
-            if p.hostname == h and p.k then
+            if not p.alias and p.hostname == h and p.k then
                 return cb(p.k)
             end
         end

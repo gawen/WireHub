@@ -13,6 +13,10 @@ local packet = require('packet')
 
 local M = {}
 
+local function explain(n, fmt, ...)
+    return n:explain("auth", fmt, ...)
+end
+
 function M.authenticate(n, k, alias_sk, cb)
     local a = {
         alias_sk = alias_sk,
@@ -39,6 +43,11 @@ function M.authenticate(n, k, alias_sk, cb)
             a.s = nil
         end
 
+        if a.p then
+            a.p:release(a)
+            a.p = nil
+        end
+
         if cb then
             cpcall(cb, ok, ...)
         end
@@ -56,7 +65,7 @@ function M.authenticate(n, k, alias_sk, cb)
             return a:cb(false, "not found")
         end
 
-        a.p = p
+        a.p = p:acquire(a)
     end)
 
     n.auths[a] = true
@@ -82,6 +91,7 @@ function M.update(n, a, deadlines)
             return a:cb(false, "could not auth")
         end
 
+        explain(n, "auth as %s ? (retry: %d)", n:key(a.alias_k), a.retry)
         n:_sendto{
             dst=a.p,
             m=packet.auth(n, a.p),
@@ -102,7 +112,9 @@ function M.resolve_alias(n, alias, src)
     -- alias may be nil
 
     if alias then
-        -- copy all attributes of alias to p
+        explain(n, "alias %s is %s", n:key(alias), n:key(src))
+
+        -- copy all attributes from alias to p
         src.relay = nil
         for k, v in pairs(alias) do
             if k ~= 'k' and k ~= 'alias' then
@@ -110,7 +122,10 @@ function M.resolve_alias(n, alias, src)
             end
         end
 
-        alias.alias = src.k
+        -- remove alias
+        n.kad:unlink(alias)
+
+
     end
 end
 
@@ -120,6 +135,15 @@ function M.on_authed(n, alias_k, src)
             local alias = n.kad:get(alias_k)
 
             M.resolve_alias(n, alias, n.p)
+
+            -- wg might need to be enabled
+            if n.lo then
+                n.lo:refresh()
+            end
+
+            if n.wgsync then
+                n.wgsync:refresh()
+            end
 
             return a:cb(true)
         end

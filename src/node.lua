@@ -559,12 +559,7 @@ function MT.__index.describe(n, mode)
 
             r[#r+1] = string.format("$(reset) %s", n:key(p))
 
-            if p.alias then
-                if type(p.alias) == 'string' then
-                    r[#r+1] = string.format(" is %s", p.hostname or n:key(p.alias))
-                end
-            elseif p.relay then
-            elseif p.addr then
+            if not p.alias and not p.reliay and p.addr then
                 r[#r+1] = string.format(': %s', p.addr)
             end
 
