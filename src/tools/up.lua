@@ -65,7 +65,7 @@ do
     if log_path then
         local log_fh = io.open(log_path, "a")
 
-        function log(s)
+        function LOG(s)
             log_fh:write(s .. '\n')
             log_fh:flush()
         end

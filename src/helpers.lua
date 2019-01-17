@@ -275,13 +275,13 @@ do
         return s
     end
 
-    _G['log'] = false
+    _G['LOG'] = false
 
     function printf(...)
         local fmt = string.format(...)
 
-        if _G['log'] then
-            _G['log'](format_color(fmt, false))
+        if _G['LOG'] then
+            _G['LOG'](format_color(fmt, false))
         end
 
         io.stdout:write(string.format("\r%s\r", string.rep(' ', #notif)))
