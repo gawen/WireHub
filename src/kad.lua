@@ -4,7 +4,7 @@ local time = require('time')
 local M = {}
 
 local function explain(n, p, fmt, ...)
-    return n:explain("(peer %s) " .. fmt, n:key(p), ...)
+    return n:explain('peer %s', fmt, n:key(p), ...)
 end
 
 local function update_fragment(p)

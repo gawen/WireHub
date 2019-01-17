@@ -612,10 +612,9 @@ function MT.__index.key(n, p_or_k)
     return wh.key(p_or_k, n)
 end
 
-function MT.__index.explain(n, ...)
+function MT.__index.explain(n, sub, fmt, ...)
     if n.log >= 1 then
-        local fmt = select(1, ...)
-        printf("$(green)" .. fmt .. "$(reset)", select(2, ...))
+        printf("$(green)(" .. sub .. ")$(reset) " .. fmt, ...)
     end
 end
 
@@ -712,11 +711,11 @@ function MT.__index.reload(n, conf)
             local pconf = pconfs[p.k]
 
             if p.alias and not pconf then
-                n:explain("(conf) remove alias %s", n:key(p))
+                n:explain('conf', "remove alias %s", n:key(p))
                 to_remove[#to_remove+1] = p
 
             elseif p.trust and (not pconf or not pconf.trust) then
-                n:explain("(conf) remove %s from trusted peers", n:key(p))
+                n:explain('conf', "remove %s from trusted peers", n:key(p))
                 p.trust = false
             end
 
@@ -747,7 +746,6 @@ function MT.__index.reload(n, conf)
 
         do
             local r = {}
-            r[#r+1] = "(conf) "
             r[#r+1] = new_p and "add " or "update "
 
             if p.alias then r[#r+1] = "alias "
@@ -757,7 +755,7 @@ function MT.__index.reload(n, conf)
 
             r[#r+1] = "$(yellow)" .. n:key(p)
 
-            n:explain(table.concat(r))
+            n:explain('conf', table.concat(r))
         end
     end
 

@@ -26,7 +26,7 @@ local function explain(n, s, fmt, ...)
         action='explain',
         what=string.format(fmt, ...),
     } end
-    return n:explain("(search %s) " .. fmt, n:key(s.k), ...)
+    return n:explain("search %s", fmt, n:key(s.k), ...)
 end
 
 function M._extend(n, s, closest, src)

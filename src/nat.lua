@@ -9,7 +9,7 @@ local peer = require('peer')
 local M = {}
 
 local function explain(n, d, fmt, ...)
-    return n:explain("(nat %s) " .. fmt, n:key(d.k), ...)
+    return n:explain("nat %s", fmt, n:key(d.k), ...)
 end
 
 function M.detect_nat(n, k, cb)

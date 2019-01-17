@@ -108,7 +108,7 @@ local function update_upnp(n, deadlines)
     if deadline <= now and not u.checking then
         u.checking = true
 
-        n:explain("checking UPnP...")
+        n:explain('connectivity', "checking UPnP...")
         u.worker:pcall(
             function(ok, ...)
                 u.checking = false
@@ -169,23 +169,23 @@ function M.update(n, deadlines)
     local deadline = (n.last_connectivity_check or 0) + wh.CONNECTIVITY_CHECK_EVERY
     if now > deadline then
         if n.mode == 'unknown' then
-            n:explain("checking connectivity...")
+            n:explain('connectivity', "checking connectivity...")
             n.checking_connectivity = true
             n:detect_nat(nil, function(mode)
                 n.checking_connectivity = false
 
-                n:explain("NAT is $(magenta)%s", mode)
+                n:explain('connectivity', "NAT is $(magenta)%s", mode)
 
                 n.is_nated = mode ~= 'direct'
 
-                n:explain("find self")
+                n:explain('connectivity', "find self")
                 n:search(n.k, 'lookup')     -- center
                 n.last_connectivity_check = now
             end)
 
             deadline = nil
         else
-            n:explain("find self")
+            n:explain('connectivity', "find self")
             n:search(n.k, 'lookup')     -- center
 
             n.last_connectivity_check = now

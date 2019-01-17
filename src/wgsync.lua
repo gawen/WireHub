@@ -15,7 +15,7 @@ local MT = {
 }
 
 local function explain(sy, fmt, ...)
-    return sy.n:explain("(wgsync) " .. fmt, ...)
+    return sy.n:explain('wgsync', fmt, ...)
 end
 
 local function set_peers(sy, wg_peers)
