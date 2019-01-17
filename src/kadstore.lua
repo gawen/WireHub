@@ -92,6 +92,25 @@ function MT.__index.kclosest(t, k, count, filter_cb)
     return r
 end
 
+function MT.__index.unlink(t, p)
+    local bid = wh.bid(t.root.k, p.k)
+    local b = t.buckets[bid]
+    if not b then return end
+
+    local to_remove
+    for i, pi in ipairs(b) do
+        if p == pi then
+            to_remove = i
+            break
+        end
+    end
+
+    if to_remove then
+        table.remove(b, to_remove)
+        b[p.k] = nil
+    end
+end
+
 return function(root_k, kad_k)
     assert(root_k and kad_k)
 
