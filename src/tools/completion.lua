@@ -123,7 +123,7 @@ local subcmd = cmd[2]
 
 if cur_idx == 2 then
     if (
-        subcmd == 'authenticate' or
+        subcmd == 'authenticate' or subcmd == 'auth' or
         subcmd == 'down' or
         subcmd == 'forget' or
         subcmd == 'inspect' or
@@ -164,6 +164,7 @@ end
 
 if cur_idx == 3 then
     if (
+        subcmd == 'authenticate' or subcmd == 'auth' or
         subcmd == 'forget' or
         subcmd == 'lookup' or
         subcmd == 'p2p' or
