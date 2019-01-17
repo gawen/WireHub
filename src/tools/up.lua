@@ -99,11 +99,14 @@ if not opts then
     return help()
 end
 
-local conf = wh.fromconf(wh.readconf(name))
+local conf, err = wh.fromconf(wh.readconf(name))
 
-if not conf then
+if conf == nil then
     printf("Unknown network `%s'", name)
-    return help()
+    return
+elseif conf == false then
+    printf("Malformed network '%s': %s", name, err)
+    return
 end
 
 -- now is a global

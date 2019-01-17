@@ -52,7 +52,10 @@ function wh.fromconf(conf)
             r['private-key'] = section.privatekey
 
         elseif section._name == 'network' then
-            if has_section_network then return end
+            if has_section_network then
+                return false, "must have only one 'network' section"
+            end
+
             has_section_network = true
 
             r.name = section.name
@@ -61,19 +64,23 @@ function wh.fromconf(conf)
 
             if section.workbits then
                 r.workbit = tonumber(section.workbits)
-                if not r.workbit then return end
+                if not r.workbit then
+                    return false, "malformed workbit"
+                end
             end
 
         elseif section._name == 'peer' then
             local p = {}
 
             if not section.publickey and not section.name then
-                return
+                return false, "at least one field publickey or name must be set"
             end
 
             if section.publickey then
                 local ok, k = pcall(wh.fromb64, section.publickey)
-                if not ok then return end
+                if not ok then
+                    return false, "malformed publickey"
+                end
                 p.k = k
             end
 
@@ -83,7 +90,9 @@ function wh.fromconf(conf)
 
             if section.alias then
                 local ok, k = pcall(wh.fromb64, section.alias)
-                if not ok then return end
+                if not ok then
+                    return false, "malformed alias"
+                end
                 p.alias = k
             end
 
