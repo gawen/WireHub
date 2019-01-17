@@ -53,7 +53,7 @@ return function(n)
             peers={},
             port=n.port,
             searches=set(n.searches),
-            subnet=n.wgsync and n.wgsync.subnet,
+            subnet=n.subnet,
             version=wh.version,
             workbit=n.workbit,
         }

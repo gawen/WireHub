@@ -416,3 +416,28 @@ function memunit(v)
     return string.format("%.1f%s", v, unit)
 end
 
+function tosubnet(x)
+    if x == nil then
+        return
+    end
+
+    local slash_idx = string.find(x, '/')
+    if not slash_idx then
+        return false, "malformed subnet"
+    end
+
+    local ip = wh.address(string.sub(x, 1, slash_idx-1))
+
+    if not ip then
+        return false, "malformed subnet, bad IP"
+    end
+
+    local cidr = string.sub(x, slash_idx+1)
+
+    if not cidr then
+        return false, "malformed subnet, bad CIDR"
+    end
+
+    return {ip=ip, cidr=cidr}
+end
+

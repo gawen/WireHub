@@ -88,10 +88,6 @@ local function update_peer(sy, k, p, wg_peers)
 
         if p.ip then
             -- XXX check subnet
-
-            local slash_idx = string.find(sy.subnet, '/')
-            local cidr = string.sub(sy.subnet, slash_idx+1)
-
             -- XXX IPv6 Orchid
 
             wg_peer.allowedips[#wg_peer.allowedips+1] = {p.ip, 32}
@@ -192,11 +188,8 @@ function MT.__index.update(sy, socks)
         sy.ip = sy.n.p.ip
 
         if sy.ip then
-            local slash_idx = string.find(sy.subnet, '/')
-            local cidr = string.sub(sy.subnet, slash_idx+1)
-
-            explain(sy, "private IP is %s/%d", sy.ip, cidr)
-            wh.wg.set_addr(sy.interface, sy.ip, cidr)
+            explain(sy, "private IP is %s/%d", sy.ip, sy.n.subnet.cidr)
+            wh.wg.set_addr(sy.interface, sy.ip, sy.n.subnet.cidr)
         else
             wh.wg.set_addr(sy.interface)
         end
@@ -206,7 +199,7 @@ function MT.__index.update(sy, socks)
 end
 
 function MT.__index.refresh(sy)
-    local new_wg_enabled = sy.subnet and sy.n.p.ip and true
+    local new_wg_enabled = sy.n.subnet and sy.n.p.ip and true
 
     -- if wg has been enabled
     if not sy.wg_enabled and new_wg_enabled then

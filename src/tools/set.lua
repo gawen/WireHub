@@ -36,10 +36,6 @@ local function tohost(n)
     return n
 end
 
-local function tosubnet(x)  -- XXX TODO
-    return tostring(x)
-end
-
 local function split_comma(x, cb)
     local r = {}
     for subnet in string.gmatch(x, "([^,]+)") do

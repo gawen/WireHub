@@ -683,11 +683,7 @@ function MT.__index.reload(n, conf)
         return false, "workbit changed"
     end
 
-    if n.wgsync then
-        n.wgsync.subnet = conf.subnet
-
-        -- XXX check self peer's IP is in the subnet
-    end
+    n.subnet = conf.subnet
 
     -- register all peers and aliases
     local pconfs = {}

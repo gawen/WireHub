@@ -60,7 +60,12 @@ function wh.fromconf(conf)
 
             r.name = section.name
             r.namespace = section.namespace
-            r.subnet = section.subnetwork
+
+            local err
+            r.subnet, err = tosubnet(section.subnetwork)
+            if r.subnet == false then
+                return false, err
+            end
 
             if section.workbits then
                 r.workbit = tonumber(section.workbits)
@@ -106,8 +111,11 @@ function wh.fromconf(conf)
             if section['allowedips'] then
                 local r = {}
                 for subnet in string.gmatch(section['allowedips'], "([^,]+)") do
+                    local err
+                    subnet, err = tosubnet(subnet)
+
                     if not subnet then
-                        return nil
+                        return false, err
                     end
                     r[#r+1] = subnet
                 end
@@ -149,7 +157,7 @@ function wh.toconf(conf)
         end
 
         if conf.subnet then
-            r[#r+1] = string.format("SubNetwork = %s\n", conf.subnet)
+            r[#r+1] = string.format("SubNetwork = %s/%d\n", conf.subnet.ip, conf.subnet.cidr)
         end
 
         for _, p in ipairs(conf.peers) do
