@@ -190,6 +190,7 @@ static void _check_allowedip(lua_State* L, int idx, struct wg_device* d, struct 
 
     default:
         luaL_error(L, "unknown sa_family");
+        return;
     };
     lua_pop(L, 1);
 
@@ -516,7 +517,7 @@ static int _set_addr(lua_State* L) {
         break;
 
     default:
-        luaL_error(L, "unknown sa_family");
+        return luaL_error(L, "unknown sa_family");
     };
 
     int isnum;
