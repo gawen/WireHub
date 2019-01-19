@@ -9,7 +9,7 @@ local interface = arg[2]
 
 local mode = 'light'
 if interface == 'interfaces' then
-    local interfaces = wh.ipc_list()
+    local interfaces = wh.ipc.list()
     table.sort(interfaces)
     for _, i in ipairs(interfaces) do
         print(i)
@@ -69,7 +69,7 @@ local function call(interface, cmd)
 end
 
 local names
-local whs = wh.ipc_list()
+local whs = wh.ipc.list()
 for _, v in ipairs(whs) do whs[v] = true end
 if interface then
     if not whs[interface] then

@@ -50,7 +50,7 @@ end
 if interface == 'all' then
     print('[')
 
-    local interfaces = wh.ipc_list()
+    local interfaces = wh.ipc.list()
     table.sort(interfaces)
     for i, k in ipairs(interfaces) do
         if i > 1 then

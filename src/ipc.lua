@@ -101,7 +101,7 @@ function I.on_readable(ipc, r)
     if ipc.listen_sock and r[ipc.listen_sock] then
         r[ipc.listen_sock] = nil
 
-        local new_sock = wh.ipc_accept(ipc.listen_sock)
+        local new_sock = wh.ipc.accept(ipc.listen_sock)
         ipc.states[new_sock] = {wait_cmd=true}
     end
 
@@ -129,7 +129,7 @@ local M = {}
 
 function M.bind(interface_name, h)
     assert(interface_name and h)
-    local listen_sock, close_cb = wh.ipc_bind(interface_name, false)
+    local listen_sock, close_cb = wh.ipc.bind(interface_name, false)
 
     return setmetatable({
         close_cb=close_cb,
@@ -141,7 +141,7 @@ end
 
 function M.call(interface_name, cmd)
     assert(interface_name)
-    local sock = wh.ipc_connect(interface_name)
+    local sock = wh.ipc.connect(interface_name)
 
     if not sock then
         return

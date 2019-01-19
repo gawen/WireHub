@@ -241,7 +241,7 @@ static const luaL_Reg funcs[] = {
     { NULL, NULL}
 };
 
-LUAMOD_API int luaopen_whupnp(lua_State* L) {
+LUAMOD_API int luaopen_upnp(lua_State* L) {
     luaL_checkversion(L);
 
     luaL_newlib(L, funcs);

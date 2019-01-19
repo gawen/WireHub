@@ -134,7 +134,7 @@ if cur_idx == 2 then
         subcmd == 'reload' or
         subcmd == 'show'
     ) then
-        local interfaces = wh.ipc_list()
+        local interfaces = wh.ipc.list()
 
         if (
             subcmd == 'show' or
@@ -143,7 +143,7 @@ if cur_idx == 2 then
             opt('all')
         end
 
-        optlist(wh.ipc_list())
+        optlist(wh.ipc.list())
         return
     end
 

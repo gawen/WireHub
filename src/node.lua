@@ -96,7 +96,7 @@ function MT.__index.update(n, socks)
     local deadlines = {}
 
     socks[#socks+1] = n.sock_echo
-    socks[#socks+1] = wh.pipe_event_fd(n.pe)
+    socks[#socks+1] = wh.ipc_event.get_fd(n.pe)
 
     n.in_udp_fd, timeout = wh.get_pcap(n.in_udp)
     socks[#socks+1] = n.in_udp_fd
@@ -315,8 +315,8 @@ function MT.__index.read(n, m, src_addr, src_k, src_is_nated, time, via, relay)
 end
 
 function MT.__index.on_readable(n, r)
-    if r[wh.pipe_event_fd(n.pe)] then
-        wh.clear_pipe_event(n.pe)
+    if r[wh.ipc_event.get_fd(n.pe)] then
+        wh.ipc_event.clear(n.pe)
     end
 
     if n.upnp then
@@ -398,7 +398,7 @@ function MT.__index.close(n)
     wh.close_pcap(n.in_udp)
     n.in_udp = nil
 
-    wh.close_pipe_event(n.pe)
+    wh.ipc_event.close(n.pe)
     n.pe = nil
 
     if n.in_udp_fd then
@@ -600,7 +600,7 @@ end
 
 function MT.__index.stop(n)
     n.running = false
-    wh.set_pipe_event(n.pe)
+    wh.ipc_event.set(n.pe)
 end
 
 function MT.__index.key(n, p_or_k)
@@ -793,7 +793,7 @@ function M.new(n)
     n.auths = {}
     n.nat_detectors = {}
     n.jitter_rand = math.random() * 1
-    n.pe = wh.pipe_event()
+    n.pe = wh.ipc_event.new()
     n.frag_counter = math.floor(math.random() * 0xffff)
 
     if n.bw then

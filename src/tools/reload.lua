@@ -45,7 +45,7 @@ local function call(interface, cmd)
 end
 
 local names
-local whs = wh.ipc_list()
+local whs = wh.ipc.list()
 for _, v in ipairs(whs) do whs[v] = true end
 if interface then
     if not whs[interface] then

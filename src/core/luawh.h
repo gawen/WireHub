@@ -48,13 +48,15 @@ static inline uint16_t luaW_checkport(lua_State* L, int idx) {
 void luaW_pushfd(lua_State* L, int fd);
 int luaW_getfd(lua_State* L, int idx);
 
+LUAMOD_API int luaopen_ipc(lua_State* L);
+LUAMOD_API int luaopen_ipc_event(lua_State* L);
 LUAMOD_API int luaopen_tun(lua_State* L);
 LUAMOD_API int luaopen_wg(lua_State* L);
 LUAMOD_API int luaopen_whcore(lua_State* L);
 LUAMOD_API int luaopen_worker(lua_State* L);
 
 #if WH_ENABLE_MINIUPNPC
-LUAMOD_API int luaopen_whupnp(lua_State* L);
+LUAMOD_API int luaopen_upnp(lua_State* L);
 #endif
 
 #endif  // LUAWH_H

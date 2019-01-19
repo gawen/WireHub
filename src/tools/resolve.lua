@@ -11,7 +11,7 @@ local name = arg[2]
 local function resolve(cmd, name)
     local resolv = {}
 
-    for _, interface in ipairs(wh.ipc_list()) do
+    for _, interface in ipairs(wh.ipc.list()) do
         local ipc_cmd = string.format('%s %s', cmd, name)
         local ok, value = pcall(require('ipc').call, interface, ipc_cmd)
         if not ok then

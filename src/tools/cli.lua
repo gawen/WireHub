@@ -106,7 +106,7 @@ SUBCMDS = {
 }
 for _, k in ipairs(SUBCMDS) do SUBCMDS[k] = true end
 
-wh.ipc_prepare()
+wh.ipc.prepare()
 
 local cmd = arg[1] or 'show'
 

@@ -1,18 +1,19 @@
-#include "ipc.h"
 #include "key.h"
 #include "luawh.h"
 #include "net.h"
 #include "os.h"
 #include "packet.h"
 #include "pcap.h"
+#include <dirent.h>
+#include <netinet/if_ether.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <syslog.h>
 #include <time.h>
-#include <netinet/ip.h>
-#include <netinet/udp.h>
-#include <netinet/if_ether.h>
-#include <dirent.h>
+
+/*** HELPERS *****************************************************************/
 
 static void _expanduser(lua_State* L) {
     luaL_loadstring(L,
@@ -23,9 +24,143 @@ static void _expanduser(lua_State* L) {
     lua_call(L, 1, 1);
 }
 
-struct pipe_event {
-    int fds[2];
-};
+/*** FILE DESCRIPTOR *********************************************************/
+
+static int _close(lua_State* L) {
+    int fd = luaW_getfd(L, 1);
+
+    close(fd);
+
+    lua_getfield(L, LUA_REGISTRYINDEX, "fds");
+    lua_pushinteger(L, fd);
+    lua_pushnil(L);
+    lua_settable(L, -3);
+
+    return 0;
+}
+
+static void _pushfile(lua_State* L, const char* filepath) {
+    FILE* fh = fopen(filepath, "rb");
+
+    if (!fh && errno == ENOENT) {
+        lua_pushnil(L);
+        return;
+    }
+
+    else if (!fh) {
+        luaL_error(L, "cannot open file '%s': %s", filepath, strerror(errno));
+    }
+
+    luaL_Buffer b;
+    long l = -1;
+    int did_read = 0;
+    if (
+        fseek(fh, 0, SEEK_END) >= 0 &&
+        (l = ftell(fh)) >= 0 &&
+        fseek(fh, 0, SEEK_SET) >= 0
+    ) {
+        char* p = luaL_buffinitsize(L, &b, l);
+        did_read = fread(p, 1, l, fh) == (size_t)l;
+    }
+
+    fclose(fh);
+
+    if (!did_read) {
+        luaL_error(L, "cannot read file '%s': %s", filepath, strerror(errno));
+    }
+
+    assert(l >= 0);
+    luaL_pushresultsize(&b, l);
+}
+
+/*** BASE 64 *****************************************************************/
+
+static int luaW_checkb64variant(lua_State* L, int idx) {
+    int variant = sodium_base64_VARIANT_URLSAFE_NO_PADDING;
+
+    int t = lua_type(L, idx);
+    if (t != -1 && t != LUA_TNIL) {
+        const char* s = luaL_checkstring(L, idx);
+        if (strcmp(s, "wh") == 0) {
+            variant = sodium_base64_VARIANT_URLSAFE_NO_PADDING;
+        } else if (strcmp(s, "wg") == 0) {
+            variant = sodium_base64_VARIANT_ORIGINAL;
+        }
+    }
+
+    return variant;
+}
+
+static int _tob64(lua_State* L) {
+    size_t l;
+    const char* m = luaL_checklstring(L, 1, &l);
+    int variant = luaW_checkb64variant(L, 2);
+
+    size_t b64l = sodium_base64_ENCODED_LEN(l, variant);
+    luaL_Buffer b;
+    char* b64 = luaL_buffinitsize(L, &b, b64l);
+    sodium_bin2base64(b64, b64l, (const void*)m, l, variant);
+
+    luaL_pushresultsize(&b, strlen(b64));
+    return 1;
+}
+
+static int _fromb64(lua_State* L) {
+    size_t b64l;
+    const char* b64 = luaL_checklstring(L, 1, &b64l);
+    int variant = luaW_checkb64variant(L, 2);
+
+    luaL_Buffer b;
+    void* bin = luaL_buffinitsize(L, &b, b64l);
+
+    size_t l = b64l;
+    if (sodium_base642bin(bin, l, b64, b64l, NULL, &l, NULL, variant) != 0) {
+        luaL_error(L, "invalid base64: len:%d", b64l);
+    }
+
+    luaL_pushresultsize(&b, l);
+    return 1;
+}
+
+/*** TIME ********************************************************************/
+
+static int _now(lua_State* L) {
+    struct timespec now;
+    clock_gettime(CLOCK_REALTIME, &now);
+    lua_Number n = now.tv_sec + (double)now.tv_nsec / 1.0e9;
+    lua_pushnumber(L, n);
+    return 1;
+}
+
+static int _todate(lua_State* L) {
+    lua_Number nf = luaL_checknumber(L, 1);
+    time_t n = nf; // cast
+
+    luaL_Buffer b;
+    size_t sz = sizeof"1991-08-25T20:57:08Z";
+    char* buf = luaL_buffinitsize(L, &b, sz);
+    sz = strftime(buf, sz, "%FT%TZ", gmtime(&n));
+    luaL_pushresultsize(&b, sz);
+    return 1;
+}
+
+/*** CRYPTO ******************************************************************/
+
+static int _randombytes(lua_State* L) {
+    int sz = luaL_checkinteger(L, 1);
+    if (sz < 0) {
+        luaL_error(L, "arg #1 is not positive");
+    }
+
+    luaL_Buffer b;
+    void* buf = luaL_buffinitsize(L, &b, sz);
+    randombytes_buf(buf, sz);
+    luaL_pushresultsize(&b, sz);
+
+    return 1;
+}
+
+/*** KEYS & SECRET KEYS ******************************************************/
 
 // genkey(str key, int workbit[, int num_threads])
 static int _genkey(lua_State* L) {
@@ -152,30 +287,17 @@ static int _readsk(lua_State* L) {
     return 1;
 }
 
-static int _wgkey(lua_State* L) {
-    if (lua_type(L, 1) == LUA_TSTRING) {
-        size_t l;
-        const void* pk = luaL_checklstring(L, 1, &l);
+static int _burnsk(lua_State* L) {
+    void* sk = luaW_ownsecret(L, 1, crypto_scalarmult_curve25519_BYTES);
+    luaW_freesecret(sk);
 
-        if (l != crypto_sign_ed25519_PUBLICKEYBYTES) {
-            luaL_error(L, "bad public key");
-        }
+    return 0;
+}
 
-        uint8_t wg_pk[crypto_scalarmult_curve25519_BYTES];
-        if (crypto_sign_ed25519_pk_to_curve25519(wg_pk, pk)) {
-            luaL_error(L, "bad public key");
-        }
-
-        lua_pushlstring(L, (void*)wg_pk, sizeof(wg_pk));
-    }
-
-    else {
-        void* sk = luaW_checksecret(L, 1, crypto_sign_ed25519_SECRETKEYBYTES);
-        void* wg_sk = luaW_newsecret(L, crypto_scalarmult_curve25519_BYTES);
-        if (crypto_sign_ed25519_sk_to_curve25519(wg_sk, sk)) {
-            luaL_error(L, "bad private key");
-        }
-    }
+static int _revealsk(lua_State* L) {
+    void* sk = luaW_ownsecret(L, 1, crypto_scalarmult_curve25519_BYTES);
+    lua_pushlstring(L, sk, crypto_scalarmult_curve25519_BYTES);
+    luaW_freesecret(sk);
 
     return 1;
 }
@@ -192,89 +314,64 @@ static int _workbit(lua_State* L) {
     return 1;
 }
 
-static int _sandbox(lua_State* L) {
-    (void)L;
-    return 0;
-}
+static int _bid(lua_State* L) {
+    size_t sz1, sz2;
+    const char* s1 = luaL_checklstring(L, 1, &sz1);
+    const char* s2 = NULL;
 
-static int _netdevs(lua_State* L) {
-    pcap_if_t* devs;
-    char err[PCAP_ERRBUF_SIZE];
-    if (pcap_findalldevs(&devs, err) == PCAP_ERROR) {
-        lua_pushboolean(L, 0);
-        lua_pushstring(L, err);
-        return 2;
+    if (lua_gettop(L) == 2) {
+        s2 = luaL_checklstring(L, 2, &sz2);
     }
 
-    lua_newtable(L);
+    if (s2 && sz1 != sz2) {
+        luaL_error(L, "not same length.");
+    }
 
-    int n;
-    pcap_if_t* ifi;
-    for (n=1, ifi=devs; ifi; ifi=ifi->next) {
-        lua_newtable(L);
+#define sz sz1
+    assert(sz % sizeof(uint32_t) == 0);
+    unsigned int i;
+    unsigned int r = 0;
+    for(i=0; i<sz/sizeof(uint32_t); ++i) {
+        uint32_t c = s2 ? *((uint32_t*)s1+i) ^ *((uint32_t*)s2+i) : *((uint32_t*)s1+i);
 
-        lua_pushstring(L, ifi->name);
-        lua_setfield(L, -2, "name");
-
-        lua_pushstring(L, ifi->description);
-        lua_setfield(L, -2, "description");
-
-        lua_newtable(L);
-        pcap_addr_t* ai;
-        int o;
-        for (o=1, ai=ifi->addresses; ai; ai=ai->next) {
-            lua_newtable(L);
-
-#define PUSH_SOCKADDR(v) \
-            if (v) { \
-                struct address* a = luaW_newaddress(L); \
-                if (address_from_sockaddr(a, v) == -1) { \
-                    lua_pop(L, 2); \
-                    continue; \
-                } \
-            } else { \
-                lua_pushnil(L); \
-            }
-
-            PUSH_SOCKADDR(ai->addr);
-            lua_setfield(L, -2, "addr");
-
-            PUSH_SOCKADDR(ai->netmask);
-            lua_setfield(L, -2, "netmask");
-
-            PUSH_SOCKADDR(ai->broadaddr);
-            lua_setfield(L, -2, "broadcast");
-
-            PUSH_SOCKADDR(ai->dstaddr);
-            lua_setfield(L, -2, "dest");
-
-#undef PUSH_SOCKADDR
-
-            lua_seti(L, -2, o++);
+        int t0 = c == 0 ? 32 : __builtin_clz(be32toh(c)); // XXX why endianess?
+        r += t0;
+        if (t0 < 32) {
+            break;
         }
-        lua_setfield(L, -2, "addresses");
-
-#define PUSH_FLAG(v, f) \
-        lua_pushboolean(L, ((ifi->flags & (f)) == (f))); \
-        lua_setfield(L, -2, v);
-
-        PUSH_FLAG("loopback", PCAP_IF_LOOPBACK);
-        PUSH_FLAG("up", PCAP_IF_UP);
-        PUSH_FLAG("running", PCAP_IF_RUNNING);
-        PUSH_FLAG("wireless", PCAP_IF_WIRELESS);
-        //PUSH_FLAG("conn_status", PCAP_IF_CONNECTION_STATUS);
-        //PUSH_FLAG("conn_status_unknown", PCAP_IF_CONNECTION_STATUS_UNKNOWN);
-        //PUSH_FLAG("conn_status_connected", PCAP_IF_CONNECTION_STATUS_CONNECTED);
-        //PUSH_FLAG("conn_status_disconnected", PCAP_IF_CONNECTION_STATUS_DISCONNECTED);
-        //PUSH_FLAG("conn_status_not_applicable ", PCAP_IF_CONNECTION_STATUS_NOT_APPLICABLE);
-#undef PUSH_FLAG
-
-        lua_seti(L, -2, n++);
     }
 
-    pcap_freealldevs(devs), devs = NULL;
+    if (r == sz*8) {
+        --r;
+    }
+#undef sz
+
+    lua_pushinteger(L, r+1);
     return 1;
 }
+
+static int _xor(lua_State* L) {
+    size_t sz1, sz2;
+    const char* a = luaL_checklstring(L, 1, &sz1);
+    const char* b = luaL_checklstring(L, 2, &sz2);
+
+    if (sz1 != sz2) {
+        luaL_error(L, "not same length.");
+    }
+
+#define sz sz1
+    luaL_Buffer buf;
+    char* c = luaL_buffinitsize(L, &buf, sz);
+    for (size_t i=0; i<sz; ++i) {
+        c[i] = a[i] ^ b[i];
+    }
+
+    luaL_pushresultsize(&buf, sz);
+#undef sz
+    return 1;
+}
+
+/*** ADDRESS *****************************************************************/
 
 static int _address(lua_State* L) {
     if (lua_type(L, 1) == LUA_TSTRING) {
@@ -366,6 +463,89 @@ static int _set_address_port(lua_State* L) {
     return 1;
 }
 
+/*** NETWORK INTERFACES ******************************************************/
+
+static int _netdevs(lua_State* L) {
+    pcap_if_t* devs;
+    char err[PCAP_ERRBUF_SIZE];
+    if (pcap_findalldevs(&devs, err) == PCAP_ERROR) {
+        lua_pushboolean(L, 0);
+        lua_pushstring(L, err);
+        return 2;
+    }
+
+    lua_newtable(L);
+
+    int n;
+    pcap_if_t* ifi;
+    for (n=1, ifi=devs; ifi; ifi=ifi->next) {
+        lua_newtable(L);
+
+        lua_pushstring(L, ifi->name);
+        lua_setfield(L, -2, "name");
+
+        lua_pushstring(L, ifi->description);
+        lua_setfield(L, -2, "description");
+
+        lua_newtable(L);
+        pcap_addr_t* ai;
+        int o;
+        for (o=1, ai=ifi->addresses; ai; ai=ai->next) {
+            lua_newtable(L);
+
+#define PUSH_SOCKADDR(v) \
+            if (v) { \
+                struct address* a = luaW_newaddress(L); \
+                if (address_from_sockaddr(a, v) == -1) { \
+                    lua_pop(L, 2); \
+                    continue; \
+                } \
+            } else { \
+                lua_pushnil(L); \
+            }
+
+            PUSH_SOCKADDR(ai->addr);
+            lua_setfield(L, -2, "addr");
+
+            PUSH_SOCKADDR(ai->netmask);
+            lua_setfield(L, -2, "netmask");
+
+            PUSH_SOCKADDR(ai->broadaddr);
+            lua_setfield(L, -2, "broadcast");
+
+            PUSH_SOCKADDR(ai->dstaddr);
+            lua_setfield(L, -2, "dest");
+
+#undef PUSH_SOCKADDR
+
+            lua_seti(L, -2, o++);
+        }
+        lua_setfield(L, -2, "addresses");
+
+#define PUSH_FLAG(v, f) \
+        lua_pushboolean(L, ((ifi->flags & (f)) == (f))); \
+        lua_setfield(L, -2, v);
+
+        PUSH_FLAG("loopback", PCAP_IF_LOOPBACK);
+        PUSH_FLAG("up", PCAP_IF_UP);
+        PUSH_FLAG("running", PCAP_IF_RUNNING);
+        PUSH_FLAG("wireless", PCAP_IF_WIRELESS);
+        //PUSH_FLAG("conn_status", PCAP_IF_CONNECTION_STATUS);
+        //PUSH_FLAG("conn_status_unknown", PCAP_IF_CONNECTION_STATUS_UNKNOWN);
+        //PUSH_FLAG("conn_status_connected", PCAP_IF_CONNECTION_STATUS_CONNECTED);
+        //PUSH_FLAG("conn_status_disconnected", PCAP_IF_CONNECTION_STATUS_DISCONNECTED);
+        //PUSH_FLAG("conn_status_not_applicable ", PCAP_IF_CONNECTION_STATUS_NOT_APPLICABLE);
+#undef PUSH_FLAG
+
+        lua_seti(L, -2, n++);
+    }
+
+    pcap_freealldevs(devs), devs = NULL;
+    return 1;
+}
+
+/*** SOCKETS *****************************************************************/
+
 static int _socket_udp(lua_State* L) {
     struct address* a = luaL_checkudata(L, 1, "address");
     int s = socket_udp(a);
@@ -399,70 +579,6 @@ static int _socket_raw_udp(lua_State* L) {
 
     luaW_pushfd(L, s);
     return 1;
-}
-
-
-static int _select(lua_State* L) {
-    luaL_checktype(L, 1, LUA_TTABLE);
-    luaL_checktype(L, 2, LUA_TTABLE);
-    luaL_checktype(L, 3, LUA_TTABLE);
-
-    struct timeval* pval = NULL;
-
-    if (lua_gettop(L) == 4 && lua_type(L, 4) != LUA_TNIL) {
-        lua_Number timeout = luaL_checknumber(L, 4);
-        pval = alloca(sizeof(struct timeval));
-        pval->tv_sec = (time_t)timeout;
-        pval->tv_usec = (timeout-pval->tv_sec)*1000000;
-    }
-
-    fd_set fds[3];
-
-    lua_Integer nfds = 0;
-
-    for (int i=0; i<3; ++i) {
-        FD_ZERO(&fds[i]);
-        int l = luaL_len(L, i+1);
-        for (lua_Integer j=1; j<=l; ++j) {
-            lua_geti(L, i+1, j);
-            int ok;
-            lua_Integer s = lua_tointegerx(L, -1, &ok);
-            if (!ok) {
-                luaL_error(L, "bad file descriptor type (integer expected, got %s)",
-                        lua_typename(L, lua_type(L, -1))
-                );
-            }
-            lua_pop(L, 1);
-
-            FD_SET(s, &fds[i]);
-
-            if (s > nfds) {
-                nfds = s;
-            }
-        }
-    }
-
-    if (select(nfds+1, &fds[0], &fds[1], &fds[2], pval) == -1) {
-        luaL_error(L, "select(): %s", strerror(errno));
-    }
-
-    for (int i=0; i<3; ++i) {
-        lua_newtable(L);
-
-        int l = luaL_len(L, i+1);
-        for (lua_Integer j=1; j<=l; ++j) {
-            lua_geti(L, i+1, j);
-            lua_Integer s = lua_tointegerx(L, -1, NULL);
-            lua_pop(L, 1);
-
-            if (FD_ISSET(s, &fds[i])) {
-                lua_pushboolean(L, 1);
-                lua_seti(L, -2, s);
-            }
-        }
-    }
-
-    return 3;
 }
 
 static int _send(lua_State* L) {
@@ -730,274 +846,7 @@ static int _sendto_raw_wg(lua_State* L) {
     }
 }
 
-static int luaW_checkb64variant(lua_State* L, int idx) {
-    int variant = sodium_base64_VARIANT_URLSAFE_NO_PADDING;
-
-    int t = lua_type(L, idx);
-    if (t != -1 && t != LUA_TNIL) {
-        const char* s = luaL_checkstring(L, idx);
-        if (strcmp(s, "wh") == 0) {
-            variant = sodium_base64_VARIANT_URLSAFE_NO_PADDING;
-        } else if (strcmp(s, "wg") == 0) {
-            variant = sodium_base64_VARIANT_ORIGINAL;
-        }
-    }
-
-    return variant;
-}
-
-static int _tob64(lua_State* L) {
-    size_t l;
-    const char* m = luaL_checklstring(L, 1, &l);
-    int variant = luaW_checkb64variant(L, 2);
-
-    size_t b64l = sodium_base64_ENCODED_LEN(l, variant);
-    luaL_Buffer b;
-    char* b64 = luaL_buffinitsize(L, &b, b64l);
-    sodium_bin2base64(b64, b64l, (const void*)m, l, variant);
-
-    luaL_pushresultsize(&b, strlen(b64));
-    return 1;
-}
-
-static int _fromb64(lua_State* L) {
-    size_t b64l;
-    const char* b64 = luaL_checklstring(L, 1, &b64l);
-    int variant = luaW_checkb64variant(L, 2);
-
-    luaL_Buffer b;
-    void* bin = luaL_buffinitsize(L, &b, b64l);
-
-    size_t l = b64l;
-    if (sodium_base642bin(bin, l, b64, b64l, NULL, &l, NULL, variant) != 0) {
-        luaL_error(L, "invalid base64: len:%d", b64l);
-    }
-
-    luaL_pushresultsize(&b, l);
-    return 1;
-}
-
-static int _randombytes(lua_State* L) {
-    int sz = luaL_checkinteger(L, 1);
-    if (sz < 0) {
-        luaL_error(L, "arg #1 is not positive");
-    }
-
-    luaL_Buffer b;
-    void* buf = luaL_buffinitsize(L, &b, sz);
-    randombytes_buf(buf, sz);
-    luaL_pushresultsize(&b, sz);
-
-    return 1;
-}
-
-static int _packet(lua_State* L) {
-    size_t l;
-    void* src_wg_sk = luaW_checksecret(L, 1, crypto_scalarmult_curve25519_BYTES);
-
-    uint8_t src_wg_pk[crypto_scalarmult_curve25519_BYTES];
-    if (crypto_scalarmult_base(src_wg_pk, src_wg_sk)) {
-        luaL_error(L, "bad private key");
-    }
-
-    const void* dst_wg_pk = luaL_checklstring(L, 2, &l);
-    if (l != crypto_sign_ed25519_PUBLICKEYBYTES) {
-        luaL_error(L, "bad public key");
-    }
-
-    luaL_checktype(L, 3, LUA_TBOOLEAN);
-    uint64_t is_nated = lua_toboolean(L, 3) ? 1 : 0;
-
-    const void* m = luaL_checklstring(L, 4, &l);
-    uint64_t flags_time_b = 0;
-    flags_time_b |= (htobe64(now_seconds()) & packet_flags_TIMEMASK) << packet_flags_TIMESHIFT;
-    flags_time_b |= (is_nated & packet_flags_DIRECTMASK) << packet_flags_DIRECTSHIFT;
-
-    size_t sz = packet_size(l);
-    luaL_Buffer b;
-    void* pkt = luaL_buffinitsize(L, &b, sz);
-
-    memcpy(packet_hdr(pkt), wh_pkt_hdr, sizeof(wh_pkt_hdr));
-    memcpy(packet_src(pkt), src_wg_pk, crypto_scalarmult_curve25519_BYTES);
-    memcpy(packet_flags_time(pkt), &flags_time_b, sizeof(flags_time_b));
-    memcpy(packet_body(pkt), m, l);
-
-    if (auth_packet(pkt, l, src_wg_sk, dst_wg_pk)) {
-        luaL_error(L, "auth failed");
-    }
-
-    luaL_pushresultsize(&b, sz);
-
-    return 1;
-}
-
-static int _open_packet(lua_State* L) {
-    void* dst_wg_sk = luaW_checksecret(L, 1, crypto_scalarmult_curve25519_BYTES);
-    size_t sz;
-    const void* pkt = luaL_checklstring(L, 2, &sz);
-
-    if (verify_packet(pkt, sz, dst_wg_sk)) {
-        return 0;
-    }
-
-    uint64_t flags_time_s;
-    memcpy(&flags_time_s, packet_flags_time(pkt), sizeof(flags_time_s));
-    uint64_t time_s = be64toh((flags_time_s >> packet_flags_TIMESHIFT) & packet_flags_TIMEMASK);
-    uint64_t is_nated = (flags_time_s >> packet_flags_DIRECTSHIFT) & packet_flags_DIRECTMASK;
-
-    lua_pushlstring(L, packet_src(pkt), crypto_scalarmult_curve25519_BYTES);
-    lua_pushboolean(L, is_nated);
-    lua_pushinteger(L, time_s);
-    lua_pushlstring(L, packet_body(pkt), sz-packet_size(0));
-
-    return 4;
-}
-
-static int _now(lua_State* L) {
-    struct timespec now;
-    clock_gettime(CLOCK_REALTIME, &now);
-    lua_Number n = now.tv_sec + (double)now.tv_nsec / 1.0e9;
-    lua_pushnumber(L, n);
-    return 1;
-}
-
-static int _bid(lua_State* L) {
-    size_t sz1, sz2;
-    const char* s1 = luaL_checklstring(L, 1, &sz1);
-    const char* s2 = NULL;
-
-    if (lua_gettop(L) == 2) {
-        s2 = luaL_checklstring(L, 2, &sz2);
-    }
-
-    if (s2 && sz1 != sz2) {
-        luaL_error(L, "not same length.");
-    }
-
-#define sz sz1
-    assert(sz % sizeof(uint32_t) == 0);
-    unsigned int i;
-    unsigned int r = 0;
-    for(i=0; i<sz/sizeof(uint32_t); ++i) {
-        uint32_t c = s2 ? *((uint32_t*)s1+i) ^ *((uint32_t*)s2+i) : *((uint32_t*)s1+i);
-
-        int t0 = c == 0 ? 32 : __builtin_clz(be32toh(c)); // XXX why endianess?
-        r += t0;
-        if (t0 < 32) {
-            break;
-        }
-    }
-
-    if (r == sz*8) {
-        --r;
-    }
-#undef sz
-
-    lua_pushinteger(L, r+1);
-    return 1;
-}
-
-static int _xor(lua_State* L) {
-    size_t sz1, sz2;
-    const char* a = luaL_checklstring(L, 1, &sz1);
-    const char* b = luaL_checklstring(L, 2, &sz2);
-
-    if (sz1 != sz2) {
-        luaL_error(L, "not same length.");
-    }
-
-#define sz sz1
-    luaL_Buffer buf;
-    char* c = luaL_buffinitsize(L, &buf, sz);
-    for (size_t i=0; i<sz; ++i) {
-        c[i] = a[i] ^ b[i];
-    }
-
-    luaL_pushresultsize(&buf, sz);
-#undef sz
-    return 1;
-}
-
-static int _close(lua_State* L) {
-    int fd = luaW_getfd(L, 1);
-
-    close(fd);
-
-    lua_getfield(L, LUA_REGISTRYINDEX, "fds");
-    lua_pushinteger(L, fd);
-    lua_pushnil(L);
-    lua_settable(L, -3);
-
-    return 0;
-}
-
-static int _set_pipe_event(lua_State* L) {
-    struct pipe_event* pe = luaW_checkptr(L, 1, "pipe_event");
-
-    if (write(pe->fds[1], "\x2a", 1) < 0) {
-        luaL_error(L, "write() failed: %s", strerror(errno));
-    }
-
-    return 0;
-}
-
-static int _clear_pipe_event(lua_State* L) {
-    struct pipe_event* pe = luaW_checkptr(L, 1, "pipe_event");
-
-    char buf[128];
-    if (read(pe->fds[0], buf, sizeof(buf)) < 0) {
-        luaL_error(L, "read() failed: %s", strerror(errno));
-    }
-
-    return 0;
-}
-
-static void _pipe_event_delete(void* ud) {
-    struct pipe_event* pe = ud;
-
-    close(pe->fds[0]);
-    close(pe->fds[1]);
-    free(pe);
-}
-
-static int _close_pipe_event(lua_State* L) {
-    struct pipe_event* pe = luaW_ownptr(L, 1, "pipe_event");
-
-    _pipe_event_delete(pe);
-    return 0;
-}
-
-static int _pipe_event_fd(lua_State* L) {
-    struct pipe_event* pe = luaW_checkptr(L, 1, "pipe_event");
-    lua_pushinteger(L, pe->fds[0]);
-    return 0;
-}
-
-static int _pipe_event(lua_State* L) {
-    int fds[2];
-    if (pipe(fds)) {
-        luaL_error(L, "pipe() failed: %s", strerror(errno));
-    }
-
-    struct pipe_event* pe = malloc(sizeof(struct pipe_event));
-    pe->fds[0] = fds[0];
-    pe->fds[1] = fds[1];
-    luaW_pushptr(L, "pipe_event", pe);
-
-    return 1;
-}
-
-static int _todate(lua_State* L) {
-    lua_Number nf = luaL_checknumber(L, 1);
-    time_t n = nf; // cast
-
-    luaL_Buffer b;
-    size_t sz = sizeof"1991-08-25T20:57:08Z";
-    char* buf = luaL_buffinitsize(L, &b, sz);
-    sz = strftime(buf, sz, "%FT%TZ", gmtime(&n));
-    luaL_pushresultsize(&b, sz);
-    return 1;
-}
+/*** NON INTRUSIVE SOCKETS ***************************************************/
 
 static int _sniff(lua_State* L) {
     const char* interface = luaL_checkstring(L, 1);
@@ -1112,34 +961,136 @@ static int _close_pcap(lua_State* L) {
     return 0;
 }
 
-static inline int _parse_wgkey(void* bin, size_t* pbinl, const char* b64) {
-    if (strcmp(b64, "(none)") == 0) {
-        *pbinl = 0;
-        return 0;
-    } else {
-        return sodium_base642bin(
-            (void*)bin, *pbinl,
-            b64, strlen(b64),
-            NULL, pbinl,
-            NULL, sodium_base64_VARIANT_ORIGINAL
-        );
+/*** I/O POLLING *************************************************************/
+
+static int _select(lua_State* L) {
+    luaL_checktype(L, 1, LUA_TTABLE);
+    luaL_checktype(L, 2, LUA_TTABLE);
+    luaL_checktype(L, 3, LUA_TTABLE);
+
+    struct timeval* pval = NULL;
+
+    if (lua_gettop(L) == 4 && lua_type(L, 4) != LUA_TNIL) {
+        lua_Number timeout = luaL_checknumber(L, 4);
+        pval = alloca(sizeof(struct timeval));
+        pval->tv_sec = (time_t)timeout;
+        pval->tv_usec = (timeout-pval->tv_sec)*1000000;
     }
+
+    fd_set fds[3];
+
+    lua_Integer nfds = 0;
+
+    for (int i=0; i<3; ++i) {
+        FD_ZERO(&fds[i]);
+        int l = luaL_len(L, i+1);
+        for (lua_Integer j=1; j<=l; ++j) {
+            lua_geti(L, i+1, j);
+            int ok;
+            lua_Integer s = lua_tointegerx(L, -1, &ok);
+            if (!ok) {
+                luaL_error(L, "bad file descriptor type (integer expected, got %s)",
+                        lua_typename(L, lua_type(L, -1))
+                );
+            }
+            lua_pop(L, 1);
+
+            FD_SET(s, &fds[i]);
+
+            if (s > nfds) {
+                nfds = s;
+            }
+        }
+    }
+
+    if (select(nfds+1, &fds[0], &fds[1], &fds[2], pval) == -1) {
+        luaL_error(L, "select(): %s", strerror(errno));
+    }
+
+    for (int i=0; i<3; ++i) {
+        lua_newtable(L);
+
+        int l = luaL_len(L, i+1);
+        for (lua_Integer j=1; j<=l; ++j) {
+            lua_geti(L, i+1, j);
+            lua_Integer s = lua_tointegerx(L, -1, NULL);
+            lua_pop(L, 1);
+
+            if (FD_ISSET(s, &fds[i])) {
+                lua_pushboolean(L, 1);
+                lua_seti(L, -2, s);
+            }
+        }
+    }
+
+    return 3;
 }
 
-static int _burnsk(lua_State* L) {
-    void* sk = luaW_ownsecret(L, 1, crypto_scalarmult_curve25519_BYTES);
-    luaW_freesecret(sk);
+/*** PACKET NETWORK CRYPTO ***************************************************/
 
-    return 0;
-}
+static int _packet(lua_State* L) {
+    size_t l;
+    void* src_wg_sk = luaW_checksecret(L, 1, crypto_scalarmult_curve25519_BYTES);
 
-static int _revealsk(lua_State* L) {
-    void* sk = luaW_ownsecret(L, 1, crypto_scalarmult_curve25519_BYTES);
-    lua_pushlstring(L, sk, crypto_scalarmult_curve25519_BYTES);
-    luaW_freesecret(sk);
+    uint8_t src_wg_pk[crypto_scalarmult_curve25519_BYTES];
+    if (crypto_scalarmult_base(src_wg_pk, src_wg_sk)) {
+        luaL_error(L, "bad private key");
+    }
+
+    const void* dst_wg_pk = luaL_checklstring(L, 2, &l);
+    if (l != crypto_sign_ed25519_PUBLICKEYBYTES) {
+        luaL_error(L, "bad public key");
+    }
+
+    luaL_checktype(L, 3, LUA_TBOOLEAN);
+    uint64_t is_nated = lua_toboolean(L, 3) ? 1 : 0;
+
+    const void* m = luaL_checklstring(L, 4, &l);
+    uint64_t flags_time_b = 0;
+    flags_time_b |= (htobe64(now_seconds()) & packet_flags_TIMEMASK) << packet_flags_TIMESHIFT;
+    flags_time_b |= (is_nated & packet_flags_DIRECTMASK) << packet_flags_DIRECTSHIFT;
+
+    size_t sz = packet_size(l);
+    luaL_Buffer b;
+    void* pkt = luaL_buffinitsize(L, &b, sz);
+
+    memcpy(packet_hdr(pkt), wh_pkt_hdr, sizeof(wh_pkt_hdr));
+    memcpy(packet_src(pkt), src_wg_pk, crypto_scalarmult_curve25519_BYTES);
+    memcpy(packet_flags_time(pkt), &flags_time_b, sizeof(flags_time_b));
+    memcpy(packet_body(pkt), m, l);
+
+    if (auth_packet(pkt, l, src_wg_sk, dst_wg_pk)) {
+        luaL_error(L, "auth failed");
+    }
+
+    luaL_pushresultsize(&b, sz);
 
     return 1;
 }
+
+static int _open_packet(lua_State* L) {
+    void* dst_wg_sk = luaW_checksecret(L, 1, crypto_scalarmult_curve25519_BYTES);
+    size_t sz;
+    const void* pkt = luaL_checklstring(L, 2, &sz);
+
+    if (verify_packet(pkt, sz, dst_wg_sk)) {
+        return 0;
+    }
+
+    uint64_t flags_time_s;
+    memcpy(&flags_time_s, packet_flags_time(pkt), sizeof(flags_time_s));
+    uint64_t time_s = be64toh((flags_time_s >> packet_flags_TIMESHIFT) & packet_flags_TIMEMASK);
+    uint64_t is_nated = (flags_time_s >> packet_flags_DIRECTSHIFT) & packet_flags_DIRECTMASK;
+
+    lua_pushlstring(L, packet_src(pkt), crypto_scalarmult_curve25519_BYTES);
+    lua_pushboolean(L, is_nated);
+    lua_pushinteger(L, time_s);
+    lua_pushlstring(L, packet_body(pkt), sz-packet_size(0));
+
+    return 4;
+}
+
+/*** CONFIGURATION ***********************************************************/
 
 static const char* _confpath(void) {
     const char* confpath = getenv(WH_ENV_CONFPATH);
@@ -1247,41 +1198,6 @@ static int _listconf(lua_State* L) {
 
 }
 
-static void _pushfile(lua_State* L, const char* filepath) {
-    FILE* fh = fopen(filepath, "rb");
-
-    if (!fh && errno == ENOENT) {
-        lua_pushnil(L);
-        return;
-    }
-
-    else if (!fh) {
-        luaL_error(L, "cannot open file '%s': %s", filepath, strerror(errno));
-    }
-
-    luaL_Buffer b;
-    long l = -1;
-    int did_read = 0;
-    if (
-        fseek(fh, 0, SEEK_END) >= 0 &&
-        (l = ftell(fh)) >= 0 &&
-        fseek(fh, 0, SEEK_SET) >= 0
-    ) {
-        char* p = luaL_buffinitsize(L, &b, l);
-        did_read = fread(p, 1, l, fh) == (size_t)l;
-    }
-
-    fclose(fh);
-
-    if (!did_read) {
-        luaL_error(L, "cannot read file '%s': %s", filepath, strerror(errno));
-    }
-
-    assert(l >= 0);
-    luaL_pushresultsize(&b, l);
-}
-
-
 static int _readconf(lua_State* L) {
     const char* name = luaL_checkstring(L, 1);
 
@@ -1292,81 +1208,7 @@ static int _readconf(lua_State* L) {
     return 1;
 }
 
-static int _ipc_prepare(lua_State* L) {
-    if (ipc_prepare() < 0) {
-        luaL_error(L, "prepare ipc failed: %s", strerror(errno));
-    }
-
-    return 0;
-}
-
-static int _ipc_connect(lua_State* L) {
-    const char* interface = luaL_checkstring(L, 1);
-
-    int sock;
-    if ((sock = ipc_connect(interface)) < 0) {
-        switch (errno) {
-        case ENOENT: return 0;
-        default: luaL_error(L, "connect ipc failed(): %s", strerror(errno));
-        };
-    }
-
-    luaW_pushfd(L, sock);
-    return 1;
-}
-
-static int _ipc_unlink(lua_State* L) {
-    const char* interface = lua_tostring(L, lua_upvalueindex(1));
-    assert(interface);
-
-    lua_pushboolean(L, ipc_unlink(interface) >= 0);
-    return 1;
-}
-
-static int _ipc_bind(lua_State* L) {
-    const char* interface = luaL_checkstring(L, 1);
-    luaL_checktype(L, 2, LUA_TBOOLEAN);
-    int force = lua_toboolean(L, 2);
-
-    int sock;
-    if ((sock = ipc_bind(interface, force)) < 0) {
-        luaL_error(L, "connect ipc failed(): %s", strerror(errno));
-    }
-
-    luaW_pushfd(L, sock);
-    lua_pushstring(L, interface);
-    lua_pushcclosure(L, _ipc_unlink, 1);
-    return 2;
-}
-
-static int _ipc_accept(lua_State* L) {
-    int sock = luaW_getfd(L, 1);
-
-    int new_sock;
-    if ((new_sock = ipc_accept(sock)) < 0) {
-        luaL_error(L, "connect ipc failed(): %s", strerror(errno));
-    }
-
-    luaW_pushfd(L, new_sock);
-    return 1;
-}
-
-static int _ipc_list_cb(const char* name, void* ud) {
-    lua_State* L = ud;
-
-    lua_pushstring(L, name);
-    lua_seti(L, -2, luaL_len(L, -2)+1);
-
-    return 0;
-}
-
-static int _ipc_list(lua_State* L) {
-    lua_newtable(L);
-    if (ipc_list(_ipc_list_cb, L) && errno != ENOENT) {
-        luaL_error(L, "IPC list failed: %s", strerror(errno));
-    }
-    return 1;
-}
+/*** DAEMON ******************************************************************/
 
 static int _syslog_print(lua_State* L) {
     int n = lua_gettop(L);  /* number of arguments */
@@ -1456,6 +1298,8 @@ static int _daemon(lua_State* L) {
     return 0;
 }
 
+/*** LOGGING *****************************************************************/
+
 static int _color_mode(lua_State* L) {
 	(void)L;
 
@@ -1491,20 +1335,13 @@ static const luaL_Reg funcs[] = {
     {"address", _address},
     {"bid", _bid},
     {"burnsk", _burnsk},
-    {"clear_pipe_event", _clear_pipe_event},
     {"close", _close},
     {"close_pcap", _close_pcap},
-    {"close_pipe_event", _close_pipe_event},
     {"color_mode", _color_mode},
     {"daemon", _daemon},
     {"fromb64", _fromb64},
     {"genkey", _genkey},
     {"get_pcap", _get_pcap},
-    {"ipc_accept", _ipc_accept},
-    {"ipc_bind", _ipc_bind},
-    {"ipc_connect", _ipc_connect},
-    {"ipc_prepare", _ipc_prepare},
-    {"ipc_list", _ipc_list},
     {"listconf", _listconf},
     {"netdevs", _netdevs},
     {"now", _now},
@@ -1512,8 +1349,6 @@ static const luaL_Reg funcs[] = {
     {"orchid", _orchid},
     {"packet", _packet},
     {"pcap_next_udp", _pcap_next_udp},
-    {"pipe_event", _pipe_event},
-    {"pipe_event_fd", _pipe_event_fd},
     {"publickey", _publickey},
     {"randombytes", _randombytes},
     {"readconf", _readconf},
@@ -1521,14 +1356,12 @@ static const luaL_Reg funcs[] = {
     {"recv", _recv},
     {"recvfrom", _recvfrom},
     {"revealsk", _revealsk},
-    {"sandbox", _sandbox},
     {"select", _select},
     {"send", _send},
     {"sendto", _sendto},
     {"sendto_raw_udp", _sendto_raw_udp},
     {"sendto_raw_wg", _sendto_raw_wg},
     {"set_address_port", _set_address_port},
-    {"set_pipe_event", _set_pipe_event},
     {"sniff", _sniff},
     {"socket_raw_udp", _socket_raw_udp},
     {"socket_udp", _socket_udp},
@@ -1536,7 +1369,6 @@ static const luaL_Reg funcs[] = {
     {"todate", _todate},
     {"unpack_address", _unpack_address},
     {"version", luaW_version},
-    {"wgkey", _wgkey},
     {"workbit", _workbit},
     {"writeconf", _writeconf},
     {"xor", _xor},
@@ -1558,26 +1390,29 @@ LUAMOD_API int luaopen_whcore(lua_State* L) {
 
     luaL_newlib(L, funcs);
 
+#define SUB_LUAOPEN(x)  \
+    do { \
+        assert(luaopen_##x(L) == 1); \
+        lua_setfield(L, -2, #x); \
+    } while(0)
+
+    SUB_LUAOPEN(ipc);
+    SUB_LUAOPEN(ipc_event);
+    SUB_LUAOPEN(tun);
+    SUB_LUAOPEN(wg);
+    SUB_LUAOPEN(worker);
+
 #if WH_ENABLE_MINIUPNPC
-    assert(luaopen_whupnp(L) == 1);
-    lua_setfield(L, -2, "upnp");
+    SUB_LUAOPEN(upnp);
 #endif
 
-    assert(luaopen_worker(L) == 1);
-    lua_setfield(L, -2, "worker");
-
-    assert(luaopen_tun(L) == 1);
-    lua_setfield(L, -2, "tun");
-
-    assert(luaopen_wg(L) == 1);
-    lua_setfield(L, -2, "wg");
+#undef SUB_LUAOPEN
 
     lua_newtable(L);
     lua_setfield(L, LUA_REGISTRYINDEX, "wh_fds");
 
     luaW_declptr(L, "secret", sodium_free);
     luaW_declptr(L, "pcap", _pcap_close);
-    luaW_declptr(L, "pipe_event", _pipe_event_delete);
 
     return 1;
 }

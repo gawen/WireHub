@@ -1,11 +1,11 @@
-#include "common.h"
+#include "luawh.h"
 #include <arpa/inet.h>
+#include <dirent.h>
 #include <fcntl.h>
+#include <linux/limits.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <unistd.h>
-#include <dirent.h>
-#include <sys/stat.h>
-#include <linux/limits.h>
 
 int ipc_prepare(void) {
     return system("mkdir -p " WH_DEFAULT_SOCKPATH " 2> /dev/null");
@@ -26,7 +26,7 @@ static int ipc_sockaddr_un(struct sockaddr_un* addr_un, const char* interface) {
     return 0;
 }
 
-int ipc_unlink(const char* interface) {
+static int ipc_unlink(const char* interface) {
     struct sockaddr_un addr_un;
     if (ipc_sockaddr_un(&addr_un, interface) < 0) {
         return -1;
@@ -39,7 +39,7 @@ int ipc_unlink(const char* interface) {
     return 0;
 }
 
-int ipc_bind(const char* interface, int force) {
+static int ipc_bind(const char* interface, int force) {
     int sock = -1;
 
     struct sockaddr_un addr_un;
@@ -78,7 +78,7 @@ err:
     return -1;
 }
 
-int ipc_connect(const char* interface) {
+static int ipc_connect(const char* interface) {
     int sock = -1;
 
     struct sockaddr_un addr_un;
@@ -107,7 +107,7 @@ err:
     return -1;
 }
 
-int ipc_list(int(*cb)(const char*, void*), void* ud) {
+static int ipc_list(int(*cb)(const char*, void*), void* ud) {
     DIR* dirp;
     int ret = 0;
 
@@ -146,7 +146,7 @@ int ipc_list(int(*cb)(const char*, void*), void* ud) {
     return ret;
 }
 
-int ipc_accept(int sock) {
+static int ipc_accept(int sock) {
     int new_sock = -1;
     if ((new_sock = accept(sock, NULL, NULL)) < 0) {
         return -1;
@@ -164,5 +164,96 @@ err:
     }
 
     return -1;
+}
+
+static int _ipc_prepare(lua_State* L) {
+    if (ipc_prepare() < 0) {
+        luaL_error(L, "prepare ipc failed: %s", strerror(errno));
+    }
+
+    return 0;
+}
+
+static int _ipc_connect(lua_State* L) {
+    const char* interface = luaL_checkstring(L, 1);
+
+    int sock;
+    if ((sock = ipc_connect(interface)) < 0) {
+        switch (errno) {
+        case ENOENT: return 0;
+        default: luaL_error(L, "connect ipc failed(): %s", strerror(errno));
+        };
+    }
+
+    luaW_pushfd(L, sock);
+    return 1;
+}
+
+static int _ipc_unlink(lua_State* L) {
+    const char* interface = lua_tostring(L, lua_upvalueindex(1));
+    assert(interface);
+
+    lua_pushboolean(L, ipc_unlink(interface) >= 0);
+    return 1;
+}
+
+static int _ipc_bind(lua_State* L) {
+    const char* interface = luaL_checkstring(L, 1);
+    luaL_checktype(L, 2, LUA_TBOOLEAN);
+    int force = lua_toboolean(L, 2);
+
+    int sock;
+    if ((sock = ipc_bind(interface, force)) < 0) {
+        luaL_error(L, "connect ipc failed(): %s", strerror(errno));
+    }
+
+    luaW_pushfd(L, sock);
+    lua_pushstring(L, interface);
+    lua_pushcclosure(L, _ipc_unlink, 1);
+    return 2;
+}
+
+static int _ipc_accept(lua_State* L) {
+    int sock = luaW_getfd(L, 1);
+
+    int new_sock;
+    if ((new_sock = ipc_accept(sock)) < 0) {
+        luaL_error(L, "connect ipc failed(): %s", strerror(errno));
+    }
+
+    luaW_pushfd(L, new_sock);
+    return 1;
+}
+
+static int _ipc_list_cb(const char* name, void* ud) {
+    lua_State* L = ud;
+
+    lua_pushstring(L, name);
+    lua_seti(L, -2, luaL_len(L, -2)+1);
+
+    return 0;
+}
+
+static int _ipc_list(lua_State* L) {
+    lua_newtable(L);
+    if (ipc_list(_ipc_list_cb, L) && errno != ENOENT) {
+        luaL_error(L, "IPC list failed: %s", strerror(errno));
+    }
+    return 1;
+}
+
+static const luaL_Reg funcs[] = {
+    {"accept", _ipc_accept},
+    {"bind", _ipc_bind},
+    {"connect", _ipc_connect},
+    {"prepare", _ipc_prepare},
+    {"list", _ipc_list},
+    {NULL, NULL},
+};
+
+LUAMOD_API int luaopen_ipc(lua_State* L) {
+    luaL_checkversion(L);
+    luaL_newlib(L, funcs);
+    return 1;
 }
 
