@@ -1,4 +1,4 @@
-.PHONY: all build clean run run-dbg run-vgd docker run-docker run-docker-dbg
+.PHONY: all build clean docker docker-sandbox docker-root1 run-docker run-sandbox
 
 SO = .obj/whcore.so
 SRC_C = $(wildcard src/core/*.c)
@@ -41,15 +41,6 @@ endif
 clean:
 	rm -f $(SO) $(OBJ_C)
 
-run: all
-	lua src/cli.lua
-
-run-dbg: all
-	gdb -ex run -args ./.obj/lua-dbg src/cli.lua
-
-run-vgd:
-	valgrind --track-origins=yes /usr/bin/env lua src/cli.lua
-
 docker:
 	docker build -t wirehub/wh -f docker/Dockerfile .
 
@@ -66,9 +57,3 @@ run-docker:
 run-sandbox:
 	docker run -it --rm --cap-add NET_ADMIN --cap-add SYS_ADMIN --cap-add SYS_PTRACE -v "$(shell pwd):/root/wh" wirehub/sandbox /bin/bash
 
-
-run-sandbox-nomount:
-	docker run -it --rm --cap-add NET_ADMIN --cap-add SYS_ADMIN --cap-add SYS_PTRACE wirehub/sandbox /bin/bash
-
-run-root1:
-	docker run -d --cap-add NET_ADMIN --network=host --name wh-root1 wirehub/root1
