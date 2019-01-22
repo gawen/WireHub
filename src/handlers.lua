@@ -225,7 +225,7 @@ end
 
 H[packet.cmds.auth] = function(n, m, alias)
     if not alias.alias then
-        -- not set as alias
+        log_cmd(n, m, alias, "$(yellow)auth$(reset)($(red)not an alias$(reset))")
         return
     end
 
