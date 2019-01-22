@@ -750,6 +750,12 @@ function MT.__index.reload(n, conf)
         end
     end
 
+    n:refresh()
+
+    return true
+end
+
+function MT.__index.refresh(n)
     if n.lo then
         n.lo:refresh()
     end
@@ -757,8 +763,6 @@ function MT.__index.reload(n, conf)
     if n.wgsync then
         n.wgsync:refresh()
     end
-
-    return true
 end
 
 function M.new(n)
