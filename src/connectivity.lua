@@ -168,6 +168,13 @@ function M.update(n, deadlines)
 
     local deadline = (n.last_connectivity_check or 0) + wh.CONNECTIVITY_CHECK_EVERY
     if now > deadline then
+        local function cont()
+            n:explain('connectivity', "find self")
+            n:search(n.k, 'lookup')     -- center
+
+            n.last_connectivity_check = now
+        end
+
         if n.mode == 'unknown' then
             n:explain('connectivity', "checking connectivity...")
             n.checking_connectivity = true
@@ -178,17 +185,13 @@ function M.update(n, deadlines)
 
                 n.is_nated = mode ~= 'direct'
 
-                n:explain('connectivity', "find self")
-                n:search(n.k, 'lookup')     -- center
-                n.last_connectivity_check = now
+                return cont()
             end)
 
             deadline = nil
         else
-            n:explain('connectivity', "find self")
-            n:search(n.k, 'lookup')     -- center
+            cont()
 
-            n.last_connectivity_check = now
             deadline = n.last_connectivity_check + wh.CONNECTIVITY_CHECK_EVERY
         end
     end
