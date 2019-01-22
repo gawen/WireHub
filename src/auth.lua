@@ -33,11 +33,6 @@ function M.authenticate(n, k, alias_sk, cb)
 
         n.auths[a] = nil
 
-        if a.alias_sk then
-            wh.burnsk(a.alias_sk)
-            a.alias_sk = nil
-        end
-
         if a.s then
             n:stop_search(a.s)
             a.s = nil
