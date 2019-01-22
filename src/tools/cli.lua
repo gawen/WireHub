@@ -101,7 +101,7 @@ end
 if  cmd ~= 'genkey' and
     cmd ~= 'genconf'
     then
-    wh.reveal_secret = nil
+    wh.revealsk = nil
 end
 
 if cmd == 'help' or cmd == '--help' then
