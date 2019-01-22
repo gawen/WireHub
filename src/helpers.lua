@@ -441,3 +441,32 @@ function tosubnet(x)
     return {ip=ip, cidr=cidr}
 end
 
+function check_wg()
+    local r = wh.wg.check()
+
+    if r == 'oldkernel' then
+        printf(
+            "==========\n" ..
+            "$(red)$(bold)Sorry, Linux kernel must be >%s.$(reset)\n" ..
+            "More info: https://www.wireguard.com/install/#kernel-requirements\n" ..
+            "==========$(reset)\n",
+            string.join('.', wh.wg.LINUX_MINVER)
+        )
+
+        return false
+    elseif r == 'notloaded' then
+        printf(
+            "==========\n" ..
+            "$(red)$(bold)WireGuard module is not loaded!$(reset)\n" ..
+            "\n" ..
+            "    $(bold)You might want to install WireGuard first!$(reset)\n" ..
+            "    https://www.wireguard.com/install/\n" ..
+            "==========$(reset)\n"
+        )
+
+        return false
+    end
+
+    return true
+end
+
