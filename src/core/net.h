@@ -29,7 +29,7 @@ static inline uint16_t address_port(const struct address* a) {
     };
 }
 
-int parse_address(struct address* a, const char* endpoint, uint16_t port);
+int parse_address(struct address* a, const char* endpoint, uint16_t port, int numeric);
 const char* format_address(const struct address* a, char* s, size_t sl);
 int address_from_sockaddr(struct address* out, const struct sockaddr* in);
 socklen_t address_len(const struct address* a);

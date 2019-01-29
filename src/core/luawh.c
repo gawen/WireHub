@@ -16,6 +16,71 @@ static int _address_tostring(lua_State* L) {
     return 1;
 }
 
+static int _address_eq(lua_State* L) {
+    struct address* a = luaL_checkudata(L, 1, "address");
+    struct address* b = luaL_checkudata(L, 2, "address");
+
+    if (a->sa_family != b->sa_family) {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    int cond;
+    switch (a->sa_family) {
+    case AF_INET:
+        cond = memcmp(&a->in4.sin_addr, &b->in4.sin_addr, address_len(a) != 0 ||
+            a->in4.sin_port != b->in4.sin_port) ? 1 : 0;
+        break;
+
+    case AF_INET6:
+        cond = memcmp(&a->in6.sin6_addr, &b->in6.sin6_addr, address_len(a) != 0 ||
+            a->in6.sin6_port != b->in6.sin6_port) ? 1 : 0;
+        break;
+    };
+
+    lua_pushboolean(L, cond);
+    return 1;
+}
+
+static int _address_lt(lua_State* L) {
+    struct address* a = luaL_checkudata(L, 1, "address");
+    struct address* b = luaL_checkudata(L, 2, "address");
+
+    if (a->sa_family < b->sa_family) {
+        lua_pushboolean(L, 1);
+        return 1;
+    } else if (a->sa_family > b->sa_family) {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    assert(a->sa_family == b->sa_family);
+
+    int r;
+    switch (a->sa_family) {
+    case AF_INET:
+        r = memcmp(&a->in4.sin_addr, &b->in4.sin_addr, address_len(a));
+        break;
+
+    case AF_INET6:
+        r = memcmp(&a->in6.sin6_addr, &b->in6.sin6_addr, address_len(a));
+        break;
+    };
+
+    if (r < 0) {
+        lua_pushboolean(L, 1);
+        return 1;
+    } else if (r > 0) {
+        lua_pushboolean(L, 0);
+        return 1;
+    }
+
+    assert(r == 0);
+
+    lua_pushboolean(L, address_port(a) < address_port(b) ? 1 : 0);
+    return 1;
+}
+
 static int _address_addr(lua_State* L) {
     char s[64];
 
@@ -120,7 +185,7 @@ static int _address_subnet_id(lua_State* L) {
 
     int64_t max_idx = (1L << (32-cidr)) - 2;
     if (idx < 1 || max_idx < idx) {
-        luaL_error(L, "1 <= idx <= %d is false", max_idx);
+        return 0;
     }
 
     uint32_t mask = _subnet_mask(cidr);
@@ -169,6 +234,12 @@ struct address* luaW_newaddress(lua_State* L) {
     if (luaL_newmetatable(L, "address")) {
         lua_pushcfunction(L, _address_tostring);
         lua_setfield(L, -2, "__tostring");
+
+        lua_pushcfunction(L, _address_eq);
+        lua_setfield(L, -2, "__eq");
+
+        lua_pushcfunction(L, _address_lt);
+        lua_setfield(L, -2, "__lt");
 
         lua_newtable(L);
 

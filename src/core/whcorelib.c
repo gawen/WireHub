@@ -376,12 +376,15 @@ static int _xor(lua_State* L) {
 static int _address(lua_State* L) {
     if (lua_type(L, 1) == LUA_TSTRING) {
         uint16_t port = 0;
-        if (lua_gettop(L) >= 2) {
+        if (lua_gettop(L) >= 2 && lua_type(L, 2) != LUA_TNIL) {
             port = luaW_checkport(L, 2);
         }
 
+        const char* mode_s = lua_tostring(L, 3);
+        int numeric = mode_s && strcmp(mode_s, "numeric") == 0 ? 1 : 0;
+
         struct address* a = luaW_newaddress(L);
-        if (parse_address(a, lua_tostring(L, 1), port) == -1) {
+        if (parse_address(a, lua_tostring(L, 1), port, numeric) == -1) {
             luaL_error(L, "bad address: %s", lua_tostring(L, 1));
         }
 

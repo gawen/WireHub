@@ -5,7 +5,7 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 
-int parse_address(struct address* a, const char* endpoint, uint16_t port) {
+int parse_address(struct address* a, const char* endpoint, uint16_t port, int numeric) {
     struct addrinfo hint, *res = NULL;
     int ret;
 
@@ -56,7 +56,11 @@ int parse_address(struct address* a, const char* endpoint, uint16_t port) {
 
     hint.ai_family = PF_UNSPEC;
     hint.ai_socktype = SOCK_DGRAM;
-    hint.ai_flags = AI_PASSIVE;
+    hint.ai_flags = AI_PASSIVE; // XXX why?
+
+    if (numeric) {
+        hint.ai_flags |= AI_NUMERICHOST;
+    }
 
     char* addr = alloca(addr_end-addr_s+1);
     memcpy(addr, addr_s, addr_end-addr_s);
