@@ -667,10 +667,15 @@ end
 -- Reload configuration
 function MT.__index.reload(n, conf)
     if conf == nil then
-        conf = wh.fromconf(wh.readconf(n.name))
+        if not n.confpath then
+            return false, "no conf filepath set"
+        end
+
+        local err
+        conf, err = openconf(n.confpath)
 
         if not conf then
-            return false, "unknown network"
+            return false, "error: " .. err
         end
     end
 

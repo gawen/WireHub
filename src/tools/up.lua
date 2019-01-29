@@ -151,6 +151,7 @@ local n = wh.new{
     ns={
         require('ns_keybase'),
     },
+    confpath=conf.path,
 }
 
 atexit(n.close, n)

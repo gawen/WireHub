@@ -22,7 +22,7 @@ function wh.key(k_or_p, n)
         if p.hostname then
             return p.hostname
         elseif p.ip then
-            return string.format("<ip %s>", p.ip)
+            return tostring(p.ip:addr())
         end
     end
 

@@ -7,8 +7,6 @@ extendable.
 It is built upon [WireGuard tunnels][wireguard] and provides distributed peer
 discovery & routing capabilities, NAT trasversal, extendable name resolving, ...
 
-It is written in C and Lua and is <10KLOC.
-
 ⚠️ **Not ready for production!** This is still a work-in-progress. It still
 requires some work to be clean and secure. The current code is provided for
 testing only.
@@ -106,7 +104,7 @@ wh up ./config private-key ./node_b.sk
 
 After some time, each node should be able to ping themselves.
 
-```bash
+```
 # ping node_b
 PING 10.0.42.3 (10.0.42.3): 56 data bytes
 64 bytes from 10.0.42.2: seq=0 ttl=64 time=106.801 ms
@@ -126,10 +124,18 @@ interface wh-zW-1lBeQ7, network tutorial, node node_a <NAT>
 
 ```
 
-You may stop the WireHub node as so:
+While the daemon is running, you can modify the network configuration and reload
+it.
 
 ```
-# wh down wh-zW-1lBeQ7
+# echo "trust node_c 9OtorxsAqPqZkJ-fAYNRAPr9piMWKMLnGqOVVpMUvXY" >> ./config
+# wh reload wh-zW-1lBeQ7
+```
+
+You may stop the WireHub node as so:
+
+```bash
+wh down wh-zW-1lBeQ7
 ```
 
 Advise: use auto-completion to avoid writing wirehub interface, peer's keys or

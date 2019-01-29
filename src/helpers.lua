@@ -484,6 +484,8 @@ function openconf(fpath)
         return nil, err
     end
 
+    conf.path = fpath
+
     return conf
 end
 

@@ -39,40 +39,6 @@ static int _close(lua_State* L) {
     return 0;
 }
 
-static void _pushfile(lua_State* L, const char* filepath) {
-    FILE* fh = fopen(filepath, "rb");
-
-    if (!fh && errno == ENOENT) {
-        lua_pushnil(L);
-        return;
-    }
-
-    else if (!fh) {
-        luaL_error(L, "cannot open file '%s': %s", filepath, strerror(errno));
-    }
-
-    luaL_Buffer b;
-    long l = -1;
-    int did_read = 0;
-    if (
-        fseek(fh, 0, SEEK_END) >= 0 &&
-        (l = ftell(fh)) >= 0 &&
-        fseek(fh, 0, SEEK_SET) >= 0
-    ) {
-        char* p = luaL_buffinitsize(L, &b, l);
-        did_read = fread(p, 1, l, fh) == (size_t)l;
-    }
-
-    fclose(fh);
-
-    if (!did_read) {
-        luaL_error(L, "cannot read file '%s': %s", filepath, strerror(errno));
-    }
-
-    assert(l >= 0);
-    luaL_pushresultsize(&b, l);
-}
-
 /*** BASE 64 *****************************************************************/
 
 static int luaW_checkb64variant(lua_State* L, int idx) {
@@ -1093,124 +1059,6 @@ static int _open_packet(lua_State* L) {
     return 4;
 }
 
-/*** CONFIGURATION ***********************************************************/
-
-static const char* _confpath(void) {
-    const char* confpath = getenv(WH_ENV_CONFPATH);
-    if (!confpath) {
-        confpath = WH_DEFAULT_CONFPATH;
-    }
-
-    return confpath;
-}
-
-static void _pushconfpath(lua_State* L, const char* name) {
-    const char* confpath = _confpath();
-
-    luaL_Buffer b;
-    luaL_buffinit(L, &b);
-    luaL_addstring(&b, confpath);
-    size_t confpath_len = strlen(confpath);
-    if (confpath_len == 0 || confpath[confpath_len-1] != '/') {
-        luaL_addchar(&b, '/');
-    }
-    if (name) {
-        luaL_addstring(&b, name);
-    }
-    luaL_pushresult(&b);
-    _expanduser(L);
-}
-
-static int _removeconf(lua_State* L) {
-    const char* name = luaL_checkstring(L, 1);
-
-    _pushconfpath(L, name);
-    const char* conf_filepath = lua_tostring(L, -1);
-
-    if (unlink(conf_filepath) < 0 && errno != ENOENT) {
-        luaL_error(L, "cannot remove conf '%s': %s", conf_filepath, strerror(errno));
-    }
-
-    return 0;
-}
-
-static int _writeconf(lua_State* L) {
-    const char* name = luaL_checkstring(L, 1);
-    size_t conf_sz;
-
-    if (lua_gettop(L) == 2 && lua_type(L, 2) == LUA_TNIL) {
-        return _removeconf(L);
-    }
-
-    const char* conf = luaL_checklstring(L, 2, &conf_sz);
-    const char* confpath = _confpath();
-
-    {
-        luaL_Buffer b;
-        luaL_buffinit(L, &b);
-        luaL_addstring(&b, "mkdir -p \"");
-        luaL_addstring(&b, confpath);
-        luaL_addstring(&b, "\"");
-        luaL_pushresult(&b);
-        const char* cmd = lua_tostring(L, -1);
-        if (system(cmd) < 0) {
-            luaL_error(L, "command '%s' failed: %s", cmd, strerror(errno));
-        }
-        lua_pop(L, 1);
-    }
-
-    {
-        _pushconfpath(L, name);
-        const char* conf_filepath = lua_tostring(L, -1);
-
-        FILE* fh = fopen(conf_filepath, "wb");
-        if (!fh) {
-            luaL_error(L, "cannot open conf '%s': %s", conf_filepath, strerror(errno));
-        }
-        if (fwrite(conf, conf_sz, 1, fh) != 1) {
-            luaL_error(L, "cannot write conf '%s': %s", conf_filepath, strerror(errno));
-        }
-        fclose(fh), fh=NULL;
-    }
-
-    return 0;
-}
-
-static int _listconf(lua_State* L) {
-    DIR* dirp;
-
-    _pushconfpath(L, NULL);
-    const char* confpath = lua_tostring(L, -1);
-    if ((dirp = opendir(confpath)) == NULL) {
-        luaL_error(L, "opendir() failed: %s", strerror(errno));
-    }
-
-    lua_newtable(L);
-    struct dirent* dp;
-    while ((dp = readdir(dirp))) {
-        if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0) {
-            continue;
-        }
-
-        lua_pushstring(L, dp->d_name);
-        lua_seti(L, -2, luaL_len(L, -2)+1);
-    }
-
-    closedir(dirp), dirp = NULL;
-    return 1;
-
-}
-
-static int _readconf(lua_State* L) {
-    const char* name = luaL_checkstring(L, 1);
-
-    _pushconfpath(L, name);
-    const char* conf_filepath = lua_tostring(L, -1);
-
-    _pushfile(L, conf_filepath);
-    return 1;
-}
-
 /*** DAEMON ******************************************************************/
 
 static int _syslog_print(lua_State* L) {
@@ -1345,7 +1193,6 @@ static const luaL_Reg funcs[] = {
     {"fromb64", _fromb64},
     {"genkey", _genkey},
     {"get_pcap", _get_pcap},
-    {"listconf", _listconf},
     {"netdevs", _netdevs},
     {"now", _now},
     {"open_packet", _open_packet},
@@ -1354,7 +1201,6 @@ static const luaL_Reg funcs[] = {
     {"pcap_next_udp", _pcap_next_udp},
     {"publickey", _publickey},
     {"randombytes", _randombytes},
-    {"readconf", _readconf},
     {"readsk", _readsk},
     {"recv", _recv},
     {"recvfrom", _recvfrom},
@@ -1373,7 +1219,6 @@ static const luaL_Reg funcs[] = {
     {"unpack_address", _unpack_address},
     {"version", luaW_version},
     {"workbit", _workbit},
-    {"writeconf", _writeconf},
     {"xor", _xor},
     {NULL, NULL},
 };
