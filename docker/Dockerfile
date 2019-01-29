@@ -31,7 +31,7 @@ RUN git clone https://github.com/jedisct1/libsodium && \
 # Build libpcap
 WORKDIR /root/libpcap-1.9.0
 RUN ./configure && \
-    make && \
+    make -j && \
     make install
 
 # Build sodium
@@ -39,19 +39,19 @@ WORKDIR /root/libsodium
 RUN git checkout stable && \
     ./autogen.sh && \
     ./configure && \
-    make && \
+    make -j && \
     make install
 
 # Build Lua
 WORKDIR /root/lua-5.3.5
 #RUN sed -i 's/MYCFLAGS=/MYCFLAGS=-g/g' src/Makefile && sed -i 's/-O2//g' src/Makefile
-RUN make linux && \
+RUN make -j linux && \
     make install
 
 # Build MiniUPNPc
 WORKDIR /root/miniupnp/miniupnpc
 RUN git checkout miniupnpc_2_1 && \
-    make && \
+    make -j && \
     make install && \
     make install DESTDIR=/baseroot
 
@@ -59,7 +59,7 @@ RUN git checkout miniupnpc_2_1 && \
 WORKDIR /root/wh/
 COPY deps deps
 WORKDIR /root/wh/deps/WireGuard/src/tools
-RUN make && \
+RUN make -j && \
     make install DESTDIR=/baseroot
 
 # Prepare wh
@@ -70,7 +70,7 @@ RUN printf "#!/bin/sh\nexport LUA_PATH=/opt/wh/?.lua\nlua /opt/wh/tools/cli.lua 
 WORKDIR /root/wh
 COPY Makefile .
 COPY src src
-RUN make && \
+RUN make -j && \
     cp src/*.lua /baseroot/opt/wh && \
     cp src/tools/*.lua /baseroot/opt/wh/tools && \
     cp .obj/*.so /baseroot/usr/local/lib/lua/5.3/
