@@ -1,9 +1,11 @@
 # WireHub
 
-WireHub (in a shell, *wh*) is a simple, small, peer-to-peer, decentralized,
-extensible VPN. It uses [WireGuard tunnels][wireguard] and provides distributed
-peer discovery & routing capabilities, NAT trasversal, extendable name
-resolving, ...
+WireHub (in a shell, *wh*) builds decentralized, peer-to-peer and secure overlay
+networks. It is a small (<10KLOC) and tends to be simple-to-use and easily
+extendable.
+
+It is built upon [WireGuard tunnels][wireguard] and provides distributed peer
+discovery & routing capabilities, NAT trasversal, extendable name resolving, ...
 
 It is written in C and Lua and is <10KLOC.
 
@@ -13,248 +15,133 @@ testing only.
 
 ## Features
 
-- **Simple network description**: the minimal configuration of a network is a
-  list of the public key, private IP and hostname for each member.
+- **Single file network description**: a configuration of a network is a list
+  of the public key, private IPs and hostnames for each node.
 
-- **Cryptographic network addresses**: the network address of a peer is - or
-  derived from - a [Curve25519][curve25519] public key.
+- **Decentralized peer discovery**: WireHub peers form a authentified [Kademilia
+  DHT][kademilia] network, which is the by-default discovery mechanism to find
+  new peers. [Sybil attack][sybil] is mitigated with a configurable
+  Proof-of-Work parameter (see `workbits`);
 
-- **Decentralized discovery**: WireHub peers form a [Kademilia
-  DHT][kademilia] network which is the by-default
-  discovery mechanism to find new peers. [Sybil attack][sybil] is mitigated with
-  a configurable Proof-of-Work parameter;
-
-- **Peer-to-Peer and relayed communication**: WireHub goes through NATs, using
+- **Peer-to-peer and relayed communication**: WireHub goes through NATs, using
   [UPnP IGD][igd] to map new ports on compatible routers, or using [UDP Hole
   Punching][udp-hole-punching] techniques. If a P2P communication cannot be
-  established, network traffic is relayed through trusted relayed servers or
-  peers from the community of WireHub nodes.
+  established, network traffic is relayed through the DHT.
 
 ## Getting started
 
-### Start a public peer
+### Quickstart with Docker
 
-[![demo](https://asciinema.org/a/217919.svg)](https://asciinema.org/a/217919?autoplay=1)
+Run a minimal environment with WireHub installed.
 
-Clone the current repository.
-
-```
-$ git clone --recursive https://github.com/Gawen/WireHub
-$ cd WireHub
+```bash
+docker run -it --cap-add NET_ADMIN wirehub/wh /bin/sh
 ```
 
-Build the Docker images [`wirehub/wh`][wh-docker] and [`wirehub/sandbox`][sandbox-docker].
- The former is a minimalist Docker image with WireHub. The latter is handier to
- use (auto-completion enabled, debug tooling installed, testing scripts present,
- ...).
+Run a testing environment with auto-completion enabled, testing scripts and
+debug tools installed, ...
 
-```
-$ make docker docker-sandbox
+```bash
+docker run -it --cap-add NET_ADMIN wirehub/sandbox /bin/bash
 ```
 
-Start a WireHub's sandbox,
+If you want to compile the Docker images from source,
 
-```
-$ docker run -it --cap-add NET_ADMIN wirehub/sandbox /bin/bash
-```
-
-Make sure WireHub is installed.
-
-```
-# wh help
-Usage: wh <cmd> [<args>]
-
-[...]
+```bash
+git clone --recursive https://github.com/gawen/wirehub
+cd wirehub
+make docker docker-sandbox
 ```
 
-Set up the minimal configuration for the `public` network.
+### A simple network with two nodes
 
-```
-# curl https://raw.githubusercontent.com/Gawen/WireHub/master/config/public | wh setconf public -
-# wh showconf public
-[Network]
-Name = public
-Namespace = public
-Workbits = 8
+First, generate two keys, one for each node.
 
-[Peer]
-# Trust = no
-Bootstrap = yes
-PublicKey = P17zMwXJFbBdJEn05RFIMADw9TX5_m2xgf31OgNKX3w
-Endpoint = 51.15.227.165:62096
-```
-Starts a peer for network `public`.
-
-```
-# wh up public
-```
-
-You can make sure WireHub is running.
-
-```
-# wh
-interface gOVQwCSUxK, network public, node <>
-  public key: gOVQwCSUxKUhUrkUSF0aDvssDfWVrrnm47ZMp5GJtDg
-```
-
-No peers are displayed, as no trusted peers were set up.
-
-Here to see all peers (non-trusted included).
-
-```
-# wh show gOVQwCSUxK all
-interface gOVQwCSUxK, network public, node <>
-  public key: gOVQwCSUxKUhUrkUSF0aDvssDfWVrrnm47ZMp5GJtDg
-
-  peers
-  ◒  BB_O_4Qxzw: 1.2.3.4:55329 (bucket:1)
-  ◒  C4mfi1ltU9: 1.2.3.4:46276 (bucket:1)
-  ◒  Dng_TaMHei: 1.2.3.4:6465 (bucket:1)
-  ◒  GjIX1RdmDj: 1.2.3.4:53850 (bucket:1)
-  ◒  G9qk6znNL5: 1.2.3.4:4523 (bucket:1)
-  ◒  J_RXehMJiw: 1.2.3.4:13962 (bucket:1)
-  ◒  PgjYqFfsyS: 1.2.3.4:39582 (bucket:1)
-  ●  P17zMwXJFb: 51.15.227.165:62096 (bucket:1)
-  [...]
-```
-
-Advise: use auto-completion to avoid writing wirehub interface, peer's keys or
-other arguments. For example, one could write:
-
-```
-# wh sh<TAB>
-  wh show <TAB>
-  wh show gOVQwCSUxK a<TAB>
-  wh show gOVQwCSUxK all
-```
-
-We now have a WireHub peer, but without any trusted peers. No WireGuard tunnel
-was instantiated yet. Your node is part of the public Kademilia DHT, and will
-contribute to peer decentralized discovery and traffic relaying.
-
-You may stop the WireHub peer as so:
-
-```
-# wh down gOVQwCSUxK
-```
-
-### Create a simple private network
-
-Let's create a private network called `tutorial`, with two peers: `node_a` and
-`node_b`.
-
-Start a sandbox on `node_a` and `node_b`. Run on both nodes:
-
-```
-$ docker run -it --cap-add NET_ADMIN wirehub/sandbox /bin/bash
-```
-
-First, make sure [WireGuard][wireguard] is installed.
-
-```
-$ wh check-wg
-OK! WireGuard is installed.
-```
-
-Peers of the private network `tutorial` will bootstrap through the `public`
-network. To do so, copy the network `public` in the network `tutorial`. Run on
-both nodes:
-
-```
-# wh showconf public | wh setconf tutorial -
-```
-
-Set the private network IP subnetwork to `10.0.42.0/24` (for example). Run on
-both nodes:
-
-```
-# wh set tutorial subnet 10.0.42.0/24
-```
-
-Generate private and public keys.
-
-```
-node_a # wh genkey tutorial | tee sk | wh pubkey | tee k
+```bash
+$ wh genkey | tee node_a.sk | wh pubkey | tee node_a.k
 zW-1lBeQ7IkT6NW6hL_NsV4eOPOwJi_rt1vO-omOEmQ
-...
-node_b # wh genkey tutorial | tee sk | wh pubkey | tee k
+$ wh genkey | tee node_b.sk | wh pubkey | tee node_b.k
 g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
 ```
 
-Set up the private `tutorial` with the trusted peers `node_a` and `node_b`:
-`node_a` will have private IP address `10.0.42.1` and `node_b` `10.0.42.2`. Run
-on both nodes:
+The private keys are stored in the `.sk` files. The public keys are stored in
+the `.k` files.
+
+Generate a WireHub configuration
+
+```bash
+echo "name tutorial
+subnet 10.0.42.0/24
+
+boot P17zMwXJFbBdJEn05RFIMADw9TX5_m2xgf31OgNKX3w bootstrap.wirehub.io
+trust node_a `cat node_a.k`
+trust node_b `cat node_b.k`" > config
+```
+
+File `config` should be like this:
 
 ```
-# wh set tutorial ip 10.0.42.1 name node_a peer zW-1lBeQ7IkT6NW6hL_NsV4eOPOwJi_rt1vO-omOEmQ
-# wh set tutorial ip 10.0.42.2 name node_b peer g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
+name tutorial           # name of network
+subnet 10.0.42.0/24     # private subnetwork
+
+# one DHT bootstrap node
+boot P17zMwXJFbBdJEn05RFIMADw9TX5_m2xgf31OgNKX3w bootstrap.wirehub.io
+
+# two nodes, node_a & node_b
+trust node_a zW-1lBeQ7IkT6NW6hL_NsV4eOPOwJi_rt1vO-omOEmQ
+trust node_b g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
 ```
 
-Start the private network. Run on both nodes:
+To start the network, run on `node_a` ...
+
+```bash
+wh up ./config private-key ./node_a.sk
+```
+
+... and on `node_b` ...
+
+```bash
+wh up ./config private-key ./node_b.sk
+```
+
+After some time, each node should be able to ping themselves.
+
+```bash
+# ping node_b
+PING 10.0.42.3 (10.0.42.3): 56 data bytes
+64 bytes from 10.0.42.2: seq=0 ttl=64 time=106.801 ms
+64 bytes from 10.0.42.2: seq=1 ttl=64 time=49.778 ms
 
 ```
-# wh up tutorial private-key ./sk
-```
 
-You can check the status of the VPN:
+You can check the overlay network status
 
 ```
-node_a # wh
-interface wg-zW-1lBeQ7, network tutorial, node node_a <NAT>
+# wh
+interface wh-zW-1lBeQ7, network tutorial, node node_a <NAT>
   public key: zW-1lBeQ7IkT6NW6hL_NsV4eOPOwJi_rt1vO-omOEmQ
 
   peers
      node_b
-...
-node_b # wh
-interface wg-g878Bf9ZD, network tutorial, node node_b <NAT>
-  public key: g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
-
-  peers
-     node_a
-```
-
-Now ping `node_b` from `node_a`:
 
 ```
-peer_a # ping node_b
-PING 10.0.42.2 (10.0.42.2): 56 data bytes
-64 bytes from 10.0.42.2: seq=0 ttl=64 time=106.801 ms
-64 bytes from 10.0.42.2: seq=1 ttl=64 time=49.778 ms
-...
-```
 
-You can check the current configuration of network `tutorial`:
+You may stop the WireHub node as so:
 
 ```
-# wh showconf tutorial
-[Network]
-Name = tutorial
-Namespace = public
-Workbits = 8
-SubNetwork = 10.0.42.0/24
-
-[Peer]
-# Trust = no
-Bootstrap = yes
-PublicKey = P17zMwXJFbBdJEn05RFIMADw9TX5_m2xgf31OgNKX3w
-Endpoint = 51.15.227.165:62096
-
-[Peer]
-Trust = yes
-Name = node_a
-IP = 10.0.42.1
-PublicKey = zW-1lBeQ7IkT6NW6hL_NsV4eOPOwJi_rt1vO-omOEmQ
-
-[Peer]
-Trust = yes
-Name = node_b
-IP = 10.0.42.2
-PublicKey = g878Bf9ZDc4IzFSUhWFTO1VYFVmHD5XfvEsVn83Dsho
+# wh down wh-zW-1lBeQ7
 ```
 
+Advise: use auto-completion to avoid writing wirehub interface, peer's keys or
+other arguments. For example,
 
-### Zero Netcat
+```
+# wh do<TAB>
+  wh down <TAB>
+  wh down wh-zW-1lBeQ7
+```
+
+### A use-case with WireHub: zero-netcat
 
 [![demo](https://asciinema.org/a/217931.svg)](https://asciinema.org/a/217931?autoplay=1)
 
@@ -284,6 +171,45 @@ node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV
 
 `STDIN` of `node_a` is now pipe-d into `STDOUT` of `node_b`, and vice-versa.
 
+### Start a public node
+
+The minimal configuration for a node is something like this,
+
+```
+name public
+workbit 8
+boot P17zMwXJFbBdJEn05RFIMADw9TX5_m2xgf31OgNKX3w bootstrap.wirehub.io
+```
+
+Only a bootstrap node is listed, but no trusted nodes. A node with this
+configuration will join the WireHub DHT and only provide support for discovery
+peers and relaying data (which is a good thing for the DHT's health).
+
+Start a public node,
+
+```bash
+curl https://raw.githubusercontent.com/gawen/wirehub/master/config/public > ./config
+wh up ./config
+```
+
+Check the neighbour peers in the DHT,
+
+```
+# wh show wh-gOVQwCSUxK all
+interface wh-gOVQwCSUxK, network public, node <>
+  public key: gOVQwCSUxKUhUrkUSF0aDvssDfWVrrnm47ZMp5GJtDg
+
+  peers
+  ◒  BB_O_4Qxzw: 1.2.3.4:55329 (bucket:1)
+  ◒  C4mfi1ltU9: 1.2.3.4:46276 (bucket:1)
+  ◒  Dng_TaMHei: 1.2.3.4:6465 (bucket:1)
+  ◒  GjIX1RdmDj: 1.2.3.4:53850 (bucket:1)
+  ◒  G9qk6znNL5: 1.2.3.4:4523 (bucket:1)
+  ◒  J_RXehMJiw: 1.2.3.4:13962 (bucket:1)
+  ◒  PgjYqFfsyS: 1.2.3.4:39582 (bucket:1)
+  ●  P17zMwXJFb: 51.15.227.165:62096 (bucket:1)
+  [...]
+```
 
 ## Dependencies
 
@@ -327,7 +253,7 @@ node_b # 0nc.lua ncuJonSJOS1DlFtb3HdgDJczPilrs0oPR9pwRpa_7WXwO0z-xioe_g9cdcMZkpV
 
 ## Future
 
-- **Zero-configuration networking** with IPv6 [ORCHID][orchid] addresses, to
+- **Zero-configuration IP6 networking** with IPv6 [ORCHID][orchid] addresses, to
   automatically allocate each peer a default private IP (see `wh orchid`);
 
 ## Overall source code architecture
@@ -354,8 +280,6 @@ Please refer to the documentation in each files for more info.
 [netcat]: https://en.wikipedia.org/wiki/Netcat
 [orchid]: https://datatracker.ietf.org/doc/rfc4843/
 [pow]: https://en.wikipedia.org/wiki/Proof-of-work_system
-[sandbox-docker]: https://hub.docker.com/r/wirehub/sandbox/
 [sybil]: https://en.wikipedia.org/wiki/Sybil_attack
 [udp-hole-punching]: https://en.wikipedia.org/wiki/UDP_hole_punching
-[wh-docker]: https://hub.docker.com/r/wirehub/wh/
 [wireguard]: https://www.wireguard.com/

@@ -1,11 +1,4 @@
-[Network]
-Name = public
-Namespace = public
-Workbits = 8
+name public
+workbit 8
 
-[Peer]
-# Trust = no
-Bootstrap = yes
-PublicKey = P17zMwXJFbBdJEn05RFIMADw9TX5_m2xgf31OgNKX3w
-Endpoint = bootstrap.wirehub.io:62096
-
+boot P17zMwXJFbBdJEn05RFIMADw9TX5_m2xgf31OgNKX3w bootstrap.wirehub.io:62096

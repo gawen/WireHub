@@ -470,3 +470,20 @@ function check_wg()
     return true
 end
 
+function openconf(fpath)
+    local fh, err = io.open(fpath, "r")
+    if not fh then
+        return nil, err
+    end
+
+    local conf = fh:read("a")
+    fh:close()
+
+    conf, err = wh.fromconf(conf)
+    if not conf then
+        return nil, err
+    end
+
+    return conf
+end
+

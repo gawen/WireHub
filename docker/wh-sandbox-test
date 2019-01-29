@@ -31,13 +31,9 @@ execf("rm -f /tmp/log")
 execf("make")
 print(string.rep('-', 80))
 
-execf("wh clearconf test")
-execf("cp tests/keys/config /etc/wirehub/test")
+--execf("cp tests/keys/config /etc/wirehub/test")
 
-
-skpath = string.format('tests/keys/%d.sk', id)
-
-args = string.format("up test private-key %s mode %s", skpath, mode)
+args = string.format("up ./tests/keys/config private-key tests/keys/%d.sk mode %s", id, mode)
 
 if os.getenv("VALGRIND") then
     execf("WH_LOGPATH=/tmp/log valgrind /usr/local/bin/lua src/tools/cli.lua " .. args)

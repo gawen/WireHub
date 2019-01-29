@@ -105,8 +105,14 @@ do  -- constants
         -- Seconds. Interval to check connectivity.
         CONNECTIVITY_CHECK_EVERY = 5*60,
 
+        -- Default WireHub key namespace
+        DEFAULT_NAMESPACE = 'public',
+
         -- Default WireHub (and underlying WireGuard) port
         DEFAULT_PORT = 62096,
+
+        -- Default workbit
+        DEFAULT_WORKBIT = 8,
 
         -- True to modify /etc/hosts with WireHub trusted peers
         EXPERIMENTAL_MODIFY_HOSTS = false,

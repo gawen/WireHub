@@ -7,15 +7,10 @@ function help()
         "Usage: wh <cmd> [<args>]\n" ..
         "\n" ..
         "Available setup subcommands\n" ..
-        "  addconf: Appends a configuration file to a WireHub network\n" ..
-        "  clearconf: Clear the current network configuration\n" ..
         "  down: Detach a Wireguard interface from a WireHub network (daemon)\n" ..
         "  genkey: Generates a new private key for a WireHub network\n" ..
         "  pubkey: Reads a private key from stdin and writes a public key to stdout\n" ..
         "  reload: Reload the configuration\n" ..
-        "  set: Change the current network configuration\n" ..
-        "  setconf: Applies a configuration file to a WireHub network\n" ..
-        "  showconf: Shows the current configuration of a given WireHub network\n"..
         "  up: Create a WireHub network and interface (daemon)\n" ..
         "  workbit: Print workbits for a given WireGuard public key\n" ..
         "\n" ..
@@ -49,11 +44,9 @@ SUBCMDS = {
     '_completion',
 
     -- public methods
-    "addconf",
     "authenticate",
     "bid",
     "check-wg",
-    "clearconf",
     "completion",
     "down",
     "forget",
@@ -68,10 +61,7 @@ SUBCMDS = {
     "pubkey",
     "reload",
     "resolve",
-    "set",
-    "setconf",
     "show",
-    "showconf",
     "up",
     "workbit",
 }
@@ -91,10 +81,6 @@ end
 
 if cmd == 'p2p' or cmd == 'ping' or cmd == 'lookup' then
     cmd = 'search'
-end
-
-if cmd == 'addconf' or cmd == 'clearconf' or cmd == 'setconf' then
-    cmd = 'conf'
 end
 
 -- secret cannot be revealed except in these modes

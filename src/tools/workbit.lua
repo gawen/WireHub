@@ -1,28 +1,35 @@
 function help()
-    print('Usage: wh workbit <network name>')
+    print('Usage: wh workbit {<network file path> | namespace <namespace>}')
 end
 
 if arg[2] == 'help' then
     return help()
 end
 
-local name = arg[2]
+local conf
+local idx
+if arg[2] and arg[2] ~= "namespace" then
+    local err
+    conf, err = openconf(arg[2])
+    if not conf then
+        printf("error: %s", err)
+        return -1
+    end
 
-if not name then
-    return help()
+    idx = 3
+
+else
+    idx = 2
 end
-
-local conf_s = wh.readconf(name)
-
-if not conf_s then
-    return
-end
-
-local conf = wh.fromconf(conf_s)
 
 if not conf then
-    print('Invalid configuration')
-    return
+    conf = parsearg(idx, {
+        namespace=tostring,
+    })
+
+    if not conf.namespace then
+        conf.namespace = wh.DEFAULT_NAMESPACE
+    end
 end
 
 local k = io.stdin:read()
@@ -35,6 +42,6 @@ end
 
 k = value
 
-local wb = wh.workbit(k, conf.namespace)
+local wb = wh.workbit(k, conf.namespace or 'public')
 
 print(wb)

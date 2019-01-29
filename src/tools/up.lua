@@ -30,7 +30,7 @@ local cmd = arg[1]
 
 function help()
     printf(
-"Usage: wh up <network name> [private-key <file path>] [interface <interface>] [listen-port <port>] [mode {unknown | direct | nat}]\n" ..
+"Usage: wh up <network file path> [private-key <file path>] [interface <interface>] [listen-port <port>] [mode {unknown | direct | nat}]\n" ..
 "\n" ..
 "If the argument 'private-key' is not set, one ephemeron key will be generated\n" ..
 "for the session, and destroyed when the daemon stops.\n" ..
@@ -75,10 +75,14 @@ do
 end
 -- XXX ----------------------------------------
 
-local name = arg[2]
-
-if not name then
-    return help()
+local conf
+do
+    local err
+    conf, err = openconf(arg[2])
+    if not conf then
+        printf("error: %s", err)
+        return help()
+    end
 end
 
 local opts = parsearg(3, {
@@ -97,16 +101,6 @@ local opts = parsearg(3, {
 
 if not opts then
     return help()
-end
-
-local conf, err = wh.fromconf(wh.readconf(name))
-
-if conf == nil then
-    printf("Unknown network `%s'", name)
-    return
-elseif conf == false then
-    printf("Malformed network '%s': %s", name, err)
-    return
 end
 
 -- now is a global

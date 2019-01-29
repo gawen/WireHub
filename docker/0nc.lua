@@ -36,27 +36,30 @@ function WH(...)
 end
 
 execf("make > /dev/null 2> /dev/null")
-execf("wh clearconf znc")
-execf("wh set znc workbit 8 subnet 10.0.42.1/24")
-execf("wh set znc endpoint bootstrap.wirehub.io bootstrap yes untrusted peer P17zMwXJFbBdJEn05RFIMADw9TX5_m2xgf31OgNKX3w")
 
-execf("wh genkey znc | tee /tmp/znc.sk | wh pubkey > /tmp/znc.k")
+execf('rm -f /tmp/config')
+execf('echo "name znc" >> /tmp/config')
+execf('echo "subnet 10.0.42.0/24" >> /tmp/config')
+execf('echo "workbit 8" >> /tmp/config')
+execf('echo "boot P17zMwXJFbBdJEn05RFIMADw9TX5_m2xgf31OgNKX3w bootstrap.wirehub.io" >> /tmp/config')
+
+execf("wh genkey /tmp/config | tee /tmp/znc.sk | wh pubkey > /tmp/znc.k")
 
 local k = readb64('/tmp/znc.k')
 
 local is_server = arg[1] == nil
 
 if is_server then
-    execf("wh genkey znc | tee /tmp/alias.znc.sk | wh pubkey > /tmp/alias.znc.k")
+    execf("wh genkey /tmp/config | tee /tmp/alias.znc.sk | wh pubkey > /tmp/alias.znc.k")
     local alias_sk = readb64('/tmp/alias.znc.sk', 'wg')
     local alias_k = readb64('/tmp/alias.znc.k')
 
     local invit = wh.tob64(k .. alias_sk)
     print("znc invitation: " .. invit)
 
-    execf("wh set znc ip 10.0.42.1 name server.znc router yes peer %s", wh.tob64(k))
-    execf("wh set znc ip 10.0.42.2 name client.znc alias %s", wh.tob64(alias_k))
-    WH("up znc interface wh-0nc private-key /tmp/znc.sk mode nat")
+    execf('echo "trust server.znc %s" >> /tmp/config', wh.tob64(k))
+    execf('echo "alias client.znc %s" >> /tmp/config', wh.tob64(alias_k))
+    WH("up /tmp/config interface wh-0nc private-key /tmp/znc.sk mode nat")
 
     execf("sleep 1")
     execf("nc -l -p 1024 -v")
@@ -68,9 +71,9 @@ else
 
     writeb64('/tmp/alias.znc.sk', alias_sk, 'wg')
 
-    execf("wh set znc ip 10.0.42.1 name server.znc router yes peer %s", wh.tob64(server_k))
-    execf("wh set znc ip 10.0.42.2 name client.znc alias %s", wh.tob64(alias_k))
-    WH("up znc interface wh-0nc mode nat")
+    execf('echo "trust server.znc %s" >> /tmp/config', wh.tob64(server_k))
+    execf('echo "alias client.znc %s" >> /tmp/config', wh.tob64(alias_k))
+    WH("up /tmp/config interface wh-0nc mode nat")
 
     execf("sleep 1")
     execf("wh auth wh-0nc %s /tmp/alias.znc.sk", wh.tob64(server_k))

@@ -148,17 +148,13 @@ if cur_idx == 2 then
     end
 
     if (
-        subcmd == 'addconf' or
-        subcmd == 'clearconf' or
         subcmd == 'genkey' or
         subcmd == 'orchid' or
-        subcmd == 'set' or
-        subcmd == 'show' or
-        subcmd == 'showconf' or
+        --subcmd == 'show' or
         subcmd == 'up' or
         subcmd == 'workbit'
     ) then
-        optlist(wh.listconf())
+        -- XXX complete conf file path?
     end
 end
 
