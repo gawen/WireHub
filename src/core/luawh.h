@@ -50,7 +50,6 @@ int luaW_getfd(lua_State* L, int idx);
 
 LUAMOD_API int luaopen_ipc(lua_State* L);
 LUAMOD_API int luaopen_ipc_event(lua_State* L);
-LUAMOD_API int luaopen_tun(lua_State* L);
 LUAMOD_API int luaopen_wg(lua_State* L);
 LUAMOD_API int luaopen_whcore(lua_State* L);
 LUAMOD_API int luaopen_worker(lua_State* L);

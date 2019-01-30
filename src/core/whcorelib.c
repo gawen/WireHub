@@ -1246,7 +1246,6 @@ LUAMOD_API int luaopen_whcore(lua_State* L) {
 
     SUB_LUAOPEN(ipc);
     SUB_LUAOPEN(ipc_event);
-    SUB_LUAOPEN(tun);
     SUB_LUAOPEN(wg);
     SUB_LUAOPEN(worker);
 
