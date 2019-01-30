@@ -1,7 +1,7 @@
 # WireHub
 
 WireHub (in a shell, *wh*) builds decentralized, peer-to-peer and secure overlay
-networks. It is a small (<10KLOC) and tends to be simple-to-use and easily
+networks. It is small (<10KLOC) and tends to be simple-to-use and easily
 extendable.
 
 It is built upon [WireGuard tunnels][wireguard] and provides distributed peer
