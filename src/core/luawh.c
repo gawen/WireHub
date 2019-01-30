@@ -36,6 +36,9 @@ static int _address_eq(lua_State* L) {
         cond = memcmp(&a->in6.sin6_addr, &b->in6.sin6_addr, address_len(a) != 0 ||
             a->in6.sin6_port != b->in6.sin6_port) ? 1 : 0;
         break;
+
+    default:
+        return luaL_error(L, "bad address");
     };
 
     lua_pushboolean(L, cond);
@@ -65,6 +68,9 @@ static int _address_lt(lua_State* L) {
     case AF_INET6:
         r = memcmp(&a->in6.sin6_addr, &b->in6.sin6_addr, address_len(a));
         break;
+
+    default:
+        return luaL_error(L, "bad address");
     };
 
     if (r < 0) {
