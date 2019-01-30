@@ -19,6 +19,7 @@ echo "#####################"
 echo "# wirehub's sandbox #"
 echo "#####################"
 echo ""
+wh check-wg
 
 
 if [ ! -z "$MICRONET" ]; then
