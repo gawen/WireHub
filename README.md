@@ -284,7 +284,7 @@ Please refer to the documentation in each files for more info.
 [micronet]: https://github.com/Gawen/WireHub/tree/develop-testbed/contrib/micronet
 [miniupnpc]: http://miniupnp.free.fr/
 [netcat]: https://en.wikipedia.org/wiki/Netcat
-[orchid]: https://datatracker.ietf.org/doc/rfc4843/
+[orchid]: https://datatracker.ietf.org/doc/rfc7343/
 [pow]: https://en.wikipedia.org/wiki/Proof-of-work_system
 [sybil]: https://en.wikipedia.org/wiki/Sybil_attack
 [udp-hole-punching]: https://en.wikipedia.org/wiki/UDP_hole_punching
