@@ -150,6 +150,7 @@ other arguments. For example,
 ### A use-case with WireHub: zero-netcat
 
 [![demo](https://asciinema.org/a/217931.svg)](https://asciinema.org/a/217931?autoplay=1)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FGawen%2FWireHub.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2FGawen%2FWireHub?ref=badge_shield)
 
 Zero Netcat, or `0nc`, is a modified version of [Netcat][netcat] which runs over
 WireHub. It has the nice property to be secure, peer-to-peer and agnostic of the
@@ -289,3 +290,7 @@ Please refer to the documentation in each files for more info.
 [sybil]: https://en.wikipedia.org/wiki/Sybil_attack
 [udp-hole-punching]: https://en.wikipedia.org/wiki/UDP_hole_punching
 [wireguard]: https://www.wireguard.com/
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2FGawen%2FWireHub.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2FGawen%2FWireHub?ref=badge_large)
